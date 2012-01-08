@@ -10,13 +10,15 @@ type t = {
 
 let classname = "queue"
 
-let rec do_burst info n =
-  (*
-  Printf.printf "INFO: do_burst %d backlog %d waiters %d ticks left\n%!"
+let report info n =
+  Printf.printf "INFO: do_burst %d capacity, %d backlog, %d waiters, %d ticks left\n%!"
+    (Squeue.approx_capacity info.ch)
     (Fqueue.length info.backlog)
     (Fqueue.length info.waiters)
-    n;
-   *)
+    n
+
+let rec do_burst info n =
+  (* report info n; *)
   if Fqueue.is_empty info.backlog then false
   else
     if Fqueue.is_empty info.waiters then false

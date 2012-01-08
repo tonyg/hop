@@ -16,6 +16,8 @@ let create n = {
   queue = Queue.create ()
 }
 
+let approx_capacity q = q.capacity
+
 let add v q =
   Mutex.lock q.mtx;
   while q.capacity < 1 do

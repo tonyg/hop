@@ -17,6 +17,7 @@ let start_net port_number =
 
 let _ =
   printf "ocamlmsg ALPHA, Copyright (C) 2012 Tony Garnock-Jones. All rights reserved.\n%!";
+  Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Uuid.init ();
   Factory.init ();
   Queuenode.init ();

@@ -72,11 +72,9 @@ let bind_ignore (filter, node) =
   else Log.warn "Duplicate binding" [Sexp.Str filter]
 
 let send_ignore name body =
-  if send name body
+  if send name body || name = ""
   then ()
-  else (Log.warn "send to missing node" [Sexp.Str name];
-	Sexp.output_sexp Pervasives.stdout body;
-	print_newline ())
+  else Log.warn "send to missing node" [Sexp.Str name; body]
 
 let post_ignore name label body token =
   send_ignore name (Message.post (label, body, token))

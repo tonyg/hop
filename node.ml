@@ -54,7 +54,13 @@ let unbind_all n =
 
 let send name body =
   match lookup name with
-  | Some n -> n.handle_message n body; true
+  | Some n ->
+      (try n.handle_message n body
+      with e ->
+	printf "WARNING: Node <<%s>> message handler raised %s\n%!"
+	  name
+	  (Printexc.to_string e));
+      true
   | None -> false
 
 let post name label body token =

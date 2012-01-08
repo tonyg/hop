@@ -2,3 +2,4 @@ Running the server and test3_latency, and then starting and
 interrupting test1_latency repeatedly, the server eventually corrupts
 itself and will no longer let test1_latency bind and receive
 messages. Sometimes test3_latency stops too.
+  [TENTATIVE FIX: see try/with in write_sexp in relay.ml]

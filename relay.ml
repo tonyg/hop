@@ -61,7 +61,7 @@ let relay_main peername cin cout =
   let mtx = Mutex.create () in
   let write_sexp s =
     Mutex.lock mtx;
-    output_sexp cout s;
+    (try output_sexp cout s with Sys_error _ -> ()); (* TODO: try removing this *)
     Mutex.unlock mtx
   in
   let flush_control = Event.new_channel () in

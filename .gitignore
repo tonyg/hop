@@ -1,3 +1,4 @@
 scratch/
 _build/
 *.native
+message.ml

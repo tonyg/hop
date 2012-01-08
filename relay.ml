@@ -32,8 +32,10 @@ let dispatch_message n ch m =
 	  (Message.subscribe_ok (Str filter))
 	  (Str "")
       else Log.warn "Bind failed" [Str filter]
-  | Message.Unsubscribe token ->
-      () (* %%% TODO *)
+  | Message.Unsubscribe (Str token) ->
+      if Node.unbind token
+      then ()
+      else Log.warn "Unbind failed" [Str token]
   | _ ->
       send_error ch "Message not understood" (Message.sexp_of_message m)
 

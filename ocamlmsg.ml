@@ -12,8 +12,16 @@ let start_net port_number =
   setsockopt sock SO_REUSEADDR true;
   bind sock (ADDR_INET (inet_addr_of_string "0.0.0.0", port_number));
   listen sock 5;
-  printf "INFO: Accepting connections on port %d.\n%!" port_number;
+  Log.info "Accepting connections" [Sexp.Str (string_of_int port_number)];
   accept_loop sock
+
+let hook_log () =
+  let old_hook = !Log.hook in
+  let new_hook label body =
+    ignore (Node.post "system.log" (Sexp.Str label) body (Sexp.Str ""));
+    old_hook label body
+  in
+  Log.hook := new_hook
 
 let _ =
   printf "ocamlmsg ALPHA, Copyright (C) 2012 Tony Garnock-Jones. All rights reserved.\n%!";
@@ -21,4 +29,5 @@ let _ =
   Uuid.init ();
   Factory.init ();
   Queuenode.init ();
+  hook_log ();
   start_net 5671

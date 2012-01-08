@@ -31,7 +31,7 @@ let dispatch_message n ch m =
 	  (Str reply_name)
 	  (Message.subscribe_ok (Str filter))
 	  (Str "")
-      else printf "WARNING: Bind failed <<%s>>\n%!" filter
+      else Log.warn "Bind failed" [Str filter]
   | Message.Unsubscribe token ->
       () (* %%% TODO *)
   | _ ->
@@ -52,7 +52,7 @@ let relay_handler write_sexp n m =
   write_sexp m
 
 let relay_main peername cin cout =
-  printf "INFO: Accepted connection from %s\n%!" (endpoint_name peername);
+  Log.info "Accepted connection" [Str (endpoint_name peername)];
   output_sexp_and_flush cout (Arr [Str "hop"; Str ""]);
   output_sexp_and_flush cout
     (Message.subscribe (Str (Node.local_container_name()),
@@ -74,11 +74,11 @@ let relay_main peername cin cout =
     done
   with
   | End_of_file ->
-      printf "INFO: Disconnecting %s normally.\n%!" (endpoint_name peername)
+      Log.info "Disconnecting normally" [Str (endpoint_name peername)]
   | Sexp.Syntax_error explanation ->
       send_sexp_syntax_error write_sexp explanation
   | Sys_error message ->
-      printf "WARNING: Disconnected by Sys_error %s\n%!" message
+      Log.warn "Disconnected by Sys_error" [Str (endpoint_name peername); Str message]
   );
   Node.unbind_all n;
   Event.sync (Event.send flush_control ())

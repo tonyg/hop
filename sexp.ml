@@ -24,16 +24,34 @@ let rec output_sexp ch x =
       output_sexp ch b
   | Arr xs ->
       output_char ch '(';
-      output_sexps ch xs;
+      List.iter (output_sexp ch) xs;
       output_char ch ')'
 
-and output_sexps ch xs =
-  match xs with
-  | [] ->
-      ()
-  | x :: xs' ->
-      output_sexp ch x;
-      output_sexps ch xs'
+let output_char_escaped ch c =
+  if c = '\"'
+  then output_string ch "\\\""
+  else output_char ch c
+
+let rec output_sexp_human ch x =
+  match x with
+  | Str s ->
+      output_char ch '\"';
+      String.iter (output_char_escaped ch) s;
+      output_char ch '\"'
+  | Hint {hint = h; body = b} ->
+      output_char ch '[';
+      output_sexp_human ch h;
+      output_char ch ']';
+      output_sexp_human ch b
+  | Arr xs ->
+      output_char ch '(';
+      (match xs with
+      | [] -> ()
+      | [x] -> output_sexp_human ch x
+      | (x :: xs') ->
+	  output_sexp_human ch x;
+	  List.iter (fun x -> output_char ch ' '; output_sexp_human ch x) xs');
+      output_char ch ')'
 
 let output_sexp_and_flush ch x =
   output_sexp ch x;

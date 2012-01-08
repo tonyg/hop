@@ -11,11 +11,11 @@ type t = {
 let classname = "queue"
 
 let report info n =
-  Printf.printf "INFO: do_burst %d capacity, %d backlog, %d waiters, %d ticks left\n%!"
-    (Squeue.approx_capacity info.ch)
-    (Fqueue.length info.backlog)
-    (Fqueue.length info.waiters)
-    n
+  Log.info (Printf.sprintf "do_burst %d capacity, %d backlog, %d waiters, %d ticks left\n%!"
+	      (Squeue.approx_capacity info.ch)
+	      (Fqueue.length info.backlog)
+	      (Fqueue.length info.waiters)
+	      n) []
 
 let rec do_burst info n =
   (* report info n; *)

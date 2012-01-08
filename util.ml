@@ -1,16 +1,15 @@
+open Sexp
 open Printf
 
 let message_not_understood context m =
-  printf "WARNING: Message not understood in %s: " context;
-  Sexp.output_sexp stdout (Message.sexp_of_message m);
-  print_newline ()
+  Log.warn "Message not understood" [Str context; Message.sexp_of_message m]
 
 let create_thread name cleanup main initarg =
   let guarded_main initarg =
     try
       main initarg
     with e ->
-      printf "WARNING: Thread <<%s>> died with %s\n%!" name (Printexc.to_string e);
+      Log.warn "Thread died with exception" [Str name; Str (Printexc.to_string e)];
       (match cleanup with
       | Some cleaner -> cleaner ()
       | None -> ())

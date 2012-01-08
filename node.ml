@@ -24,13 +24,13 @@ let lookup name =
 
 let bind (filter, node) =
   if filter = ""
-  then (printf "WARNING: Binding to empty name forbidden\n%!"; false)
+  then (Log.warn "Binding to empty name forbidden" []; false)
   else
     if StringMap.mem filter !directory
     then false
     else (directory := StringMap.add filter node !directory;
 	  node.names <- StringSet.add filter node.names;
-	  printf "INFO: Binding node <<%s>> of class %s\n%!" filter node.class_name;
+	  Log.info "Node bound" [Sexp.Str filter; Sexp.Str node.class_name];
 	  true)
 
 (* For use in factory constructor functions, hence the odd return type and values *)
@@ -41,7 +41,7 @@ let make_named class_name node_name handler =
 let unbind name =
   match lookup name with
   | Some n ->
-      printf "INFO: Unbinding node <<%s>> of class %s\n%!" name n.class_name;
+      Log.info "Node unbound" [Sexp.Str name; Sexp.Str n.class_name];
       n.names <- StringSet.remove name n.names;
       directory := StringMap.remove name !directory;
       true
@@ -57,9 +57,9 @@ let send name body =
   | Some n ->
       (try n.handle_message n body
       with e ->
-	printf "WARNING: Node <<%s>> message handler raised %s\n%!"
-	  name
-	  (Printexc.to_string e));
+	Log.warn "Node message handler raised exception"
+	  [Sexp.Str name;
+	   Sexp.Str (Printexc.to_string e)]);
       true
   | None -> false
 
@@ -69,12 +69,12 @@ let post name label body token =
 let bind_ignore (filter, node) =
   if bind (filter, node)
   then ()
-  else printf "WARNING: Duplicate binding <<%s>>\n%!" filter
+  else Log.warn "Duplicate binding" [Sexp.Str filter]
 
 let send_ignore name body =
   if send name body
   then ()
-  else (printf "WARNING: send to missing node %s: " name;
+  else (Log.warn "send to missing node" [Sexp.Str name];
 	Sexp.output_sexp Pervasives.stdout body;
 	print_newline ())
 

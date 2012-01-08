@@ -8,7 +8,7 @@ let classes = ref StringMap.empty
 
 let register_class name factory =
   if StringMap.mem name !classes
-  then (printf "ERROR: Duplicate node class name %s\n%!" name;
+  then (fprintf stderr "ERROR: Duplicate node class name %s\n%!" name;
 	exit 1)
   else classes := StringMap.add name factory !classes
 
@@ -30,7 +30,7 @@ let factory_handler n sexp =
 	  in
 	  Node.post_ignore reply_sink (Str reply_name) reply (Str "")
       | None ->
-	  printf "WARNING: Node class not found <<%s>>\n%!" classname)
+	  Log.warn "Node class not found" [Str classname])
   | m ->
       Util.message_not_understood "factory" m
 

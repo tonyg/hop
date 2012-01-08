@@ -42,9 +42,7 @@ let flush_output mtx flush_control cout =
     match Event.poll (Event.receive flush_control) with
     | Some () -> ()
     | None ->
-	Mutex.lock mtx;
-	let ok = try flush cout; true with _ -> false in
-	Mutex.unlock mtx;
+	let ok = Util.with_mutex0 mtx (fun () -> try flush cout; true with _ -> false) in
 	if ok then (Thread.delay 0.1; loop ()) else ()
   in loop ()
 
@@ -59,11 +57,7 @@ let relay_main peername cin cout =
 			Str "", Str "",
 			Str "", Str ""));
   let mtx = Mutex.create () in
-  let write_sexp s =
-    Mutex.lock mtx;
-    (try output_sexp cout s with Sys_error _ -> ()); (* TODO: try removing this *)
-    Mutex.unlock mtx
-  in
+  let write_sexp = Util.with_mutex mtx (output_sexp cout) in
   let flush_control = Event.new_channel () in
   ignore (Util.create_thread (endpoint_name peername ^ " flush") None
 	    (flush_output mtx flush_control) cout);

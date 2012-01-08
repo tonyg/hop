@@ -15,3 +15,15 @@ let create_thread name cleanup main initarg =
       | None -> ())
   in
   Thread.create guarded_main initarg
+
+let with_mutex m f arg =
+  Mutex.lock m;
+  try
+    let result = f arg in
+    Mutex.unlock m;
+    result
+  with e ->
+    Mutex.unlock m;
+    raise e
+
+let with_mutex0 m thunk = with_mutex m thunk ()

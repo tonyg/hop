@@ -38,12 +38,15 @@ let dispatch_message n ch m =
       send_error ch "Message not understood" (Message.sexp_of_message m)
 
 let flush_output mtx flush_control cout =
-  while Event.poll (Event.receive flush_control) = None do
-    Mutex.lock mtx;
-    flush cout;
-    Mutex.unlock mtx;
-    Thread.delay 0.1
-  done
+  let rec loop () =
+    match Event.poll (Event.receive flush_control) with
+    | Some () -> ()
+    | None ->
+	Mutex.lock mtx;
+	let ok = try flush cout; true with _ -> false in
+	Mutex.unlock mtx;
+	if ok then (Thread.delay 0.1; loop ()) else ()
+  in loop ()
 
 let relay_handler write_sexp n m =
   write_sexp m
@@ -73,7 +76,10 @@ let relay_main peername cin cout =
   | End_of_file ->
       printf "INFO: Disconnecting %s normally.\n%!" (endpoint_name peername)
   | Sexp.Syntax_error explanation ->
-      send_sexp_syntax_error write_sexp explanation);
+      send_sexp_syntax_error write_sexp explanation
+  | Sys_error message ->
+      printf "WARNING: Disconnected by Sys_error %s\n%!" message
+  );
   Node.unbind_all n;
   Event.sync (Event.send flush_control ())
 
@@ -83,7 +89,7 @@ let start_relay' (s, peername) =
   connection_count := 1 + !connection_count;
   relay_main peername cin cout;
   connection_count := 0 + !connection_count;
-  flush cout;
+  try flush cout with _ -> ();
   close s
 
 let start_relay (s, peername) =

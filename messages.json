@@ -1,0 +1,42 @@
+[
+    {
+	"selector": "create",
+	"args": ["classname", "arg", "reply-sink", "reply-name"]
+    },
+    {
+	"selector": "create-ok",
+	"args": []
+    },
+    {
+	"selector": "create-failed",
+	"args": ["reason"]
+    },
+    {
+	"selector": "subscribed",
+	"args": ["source", "filter", "sink", "name"]
+    },
+    {
+	"selector": "unsubscribed",
+	"args": ["source", "filter", "sink", "name"]
+    },
+    {
+	"selector": "post",
+	"args": ["name", "body", "token"]
+    },
+    {
+	"selector": "subscribe",
+	"args": ["filter", "sink", "name", "reply_sink", "reply_name"]
+    },
+    {
+	"selector": "subscribe-ok",
+	"args": ["token"]
+    },
+    {
+	"selector": "unsubscribe",
+	"args": ["token"]
+    },
+    {
+	"selector": "error",
+	"args": ["message", "details"]
+    }
+]

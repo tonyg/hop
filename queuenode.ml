@@ -3,7 +3,7 @@ open Sexp
 type t = {
     name: string;
     subscriptions: Subscription.set_t;
-    ch: Message.t Event.channel;
+    ch: Message.t Squeue.t;
     mutable backlog: Sexp.t Fqueue.t;
     mutable waiters: Subscription.t Fqueue.t;
   }
@@ -36,9 +36,9 @@ let rec do_burst info n =
 
 let rec process_and_wait info =
   if not (do_burst info 1000)
-  then Event.sync (Event.receive info.ch)
+  then Squeue.pop info.ch
   else
-    match Event.poll (Event.receive info.ch) with
+    match Squeue.peek info.ch with
     | Some m -> m
     | None -> process_and_wait info
 
@@ -69,12 +69,12 @@ let queue_factory arg =
       let info = {
 	name = name;
 	subscriptions = Subscription.new_set ();
-	ch = Event.new_channel ();
+	ch = Squeue.create 1000;
 	backlog = Fqueue.empty;
 	waiters = Fqueue.empty
       } in
       ignore (Util.create_thread name None shoveller info);
-      let queue_handler n sexp = Event.sync (Event.send info.ch (Message.message_of_sexp sexp)) in
+      let queue_handler n sexp = Squeue.add (Message.message_of_sexp sexp) info.ch in
       Node.make_named classname name queue_handler
   | _ ->
       Some (Str "bad-arg")

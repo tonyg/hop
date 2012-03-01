@@ -4,6 +4,7 @@ open Thread
 
 let rec accept_loop sock =
   let (s, peername) = accept sock in
+  setsockopt s TCP_NODELAY true;
   ignore (Relay.start_relay (s, peername));
   accept_loop sock
 

@@ -15,3 +15,4 @@ let hook = ref write_to_log
 
 let info message args = (!hook) "info" (Arr (Str message :: args))
 let warn message args = (!hook) "warn" (Arr (Str message :: args))
+let error message args = (!hook) "error" (Arr (Str message :: args))

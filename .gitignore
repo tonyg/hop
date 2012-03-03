@@ -2,3 +2,4 @@ scratch/
 _build/
 *.native
 message.ml
+amqp_spec.ml

@@ -30,6 +30,7 @@ let _ =
   Uuid.init ();
   Factory.init ();
   Queuenode.init ();
+  Directnode.init ();
   hook_log ();
   ignore (Util.create_thread "AMQP listener" None (start_net Amqp_spec.port) Amqp_relay.start);
   start_net 5671 Relay.start

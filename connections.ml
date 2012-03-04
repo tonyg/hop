@@ -19,7 +19,7 @@ let flush_output mtx flush_control cout =
 	if ok then (Thread.delay 0.1; loop ()) else ()
   in loop ()
 
-let connection_main class_name peername cin cout issue_banner node_fn mainloop =
+let connection_main class_name peername cin cout issue_banner boot_fn node_fn mainloop =
   Log.info ("Accepted "^class_name) [Str (endpoint_name peername)];
   if issue_banner cin cout
   then
@@ -27,9 +27,10 @@ let connection_main class_name peername cin cout issue_banner node_fn mainloop =
     let flush_control = Event.new_channel () in
     ignore (Util.create_thread (endpoint_name peername ^ " flush") None
 	      (flush_output mtx flush_control) cout);
-    let n = Node.make class_name (node_fn mtx cin cout) in
+    let shared_state = boot_fn (peername, mtx, cin, cout) in
+    let n = Node.make class_name (node_fn shared_state) in
     (try
-      mainloop peername mtx cin cout n
+      mainloop shared_state n
     with
     | End_of_file ->
 	Log.info ("Disconnecting "^class_name^" normally") [Str (endpoint_name peername)]
@@ -44,18 +45,18 @@ let connection_main class_name peername cin cout issue_banner node_fn mainloop =
   else
     Log.error ("Disconnected "^class_name^" by failed initial handshake") []
 
-let start_connection' class_name issue_banner node_fn mainloop (s, peername) =
+let start_connection' class_name issue_banner boot_fn node_fn mainloop (s, peername) =
   let cin = in_channel_of_descr s in
   let cout = out_channel_of_descr s in
   connection_count := !connection_count + 1;
-  connection_main class_name peername cin cout issue_banner node_fn mainloop;
+  connection_main class_name peername cin cout issue_banner boot_fn node_fn mainloop;
   connection_count := !connection_count - 1;
   (try flush cout with _ -> ());
   close s
 
-let start_connection class_name issue_banner node_fn mainloop (s, peername) =
+let start_connection class_name issue_banner boot_fn node_fn mainloop (s, peername) =
   Util.create_thread
     (endpoint_name peername ^ " input")
     None
-    (start_connection' class_name issue_banner node_fn mainloop)
+    (start_connection' class_name issue_banner boot_fn node_fn mainloop)
     (s, peername)

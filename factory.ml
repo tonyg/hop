@@ -2,7 +2,7 @@ open Printf
 open Sexp
 open Datastructures
 
-type factory_t = Sexp.t -> Sexp.t option
+type factory_t = Sexp.t -> (Sexp.t, Sexp.t) Status.t
 
 let classes = ref StringMap.empty
 
@@ -23,9 +23,11 @@ let factory_handler n sexp =
       | Some factory ->
 	  let reply =
 	    match factory arg with
-	    | None ->
-		Message.create_ok
-	    | Some explanation ->
+	    | Status.Ok info ->
+		Log.info "Node create ok" [Str classname; arg; Str reply_sink; Str reply_name];
+		Message.create_ok info
+	    | Status.Problem explanation ->
+		Log.info "Node create failed" [Str classname; arg; Str reply_sink; Str reply_name];
 		Message.create_failed explanation
 	  in
 	  Node.post_ignore reply_sink (Str reply_name) reply (Str "")

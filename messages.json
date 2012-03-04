@@ -5,7 +5,7 @@
     },
     {
 	"selector": "create-ok",
-	"args": []
+	"args": ["info"]
     },
     {
 	"selector": "create-failed",

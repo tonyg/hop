@@ -170,6 +170,9 @@ def print_codec():
     for (n, v) in constants():
         print 'let %s = %s' % (mlify(n), v)
     print
+    for c in classes:
+        print 'let %s_class_id = %d' % (mlify(c.name), c.index)
+    print
     print 'type method_t ='
     for m in methods:
         print '  | ' + m.pattern(True)
@@ -281,6 +284,26 @@ def print_codec():
     for c in classes:
         if c.fields:
             print c.match_clause + ' ' + str(c.index)
+    print
+    print 'let properties_of_sexp class_id ps_sexp = match class_id with'
+    for c in classes:
+        if c.fields:
+            print '  | %d ->' % (c.index,)
+            for f in c.accessible_fields:
+                print '      let %s = ref None in' % (mlify(f.name),)
+            print '      (match ps_sexp with'
+            print '      | Arr ps ->'
+            print '        List.iter (fun (p) -> match p with'
+            for f in c.accessible_fields:
+                print '          | Arr [Str "%s"; v] -> %s := Some (%s_of_sexp v)' % \
+                    (f.name, mlify(f.name), mlify(f.type))
+            print '          | _ -> ()) ps'
+            print '      | _ -> ());'
+            print '      %s (%s)' % \
+                (ctor(c.full_name),
+                 ', '.join(('reserved_value_'+mlify(f.type) if f.reserved else '!'+mlify(f.name)
+                            for f in c.fields)))
+    print '  | _ -> die internal_error (Printf.sprintf "Bad content class %d" class_id)'
     print
     print 'let write_properties p output_buf = match p with'
     for c in classes:

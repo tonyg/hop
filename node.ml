@@ -1,5 +1,6 @@
 open Printf
 open Datastructures
+open Status
 
 type handle_message_t = t -> Sexp.t -> unit
 and t = {
@@ -22,6 +23,8 @@ let lookup name =
   try Some (StringMap.find name !directory)
   with Not_found -> None
 
+let exists name = StringMap.mem name !directory
+
 let bind (filter, node) =
   if filter = ""
   then (Log.warn "Binding to empty name forbidden" []; false)
@@ -36,7 +39,18 @@ let bind (filter, node) =
 (* For use in factory constructor functions, hence the odd return type and values *)
 let make_named class_name node_name handler =
   let node = make class_name handler in
-  if bind (node_name, node) then None else Some (Sexp.Str "bind-failed")
+  if bind (node_name, node) then Ok node else Problem (Sexp.Str "bind-failed")
+
+(* For use in factory constructor functions, hence the odd return type and values *)
+let make_idempotent_named class_name node_name handler =
+  match lookup node_name with
+  | Some n ->
+      if n.class_name = class_name
+      then Ok n
+      else Problem (Sexp.Str "class-mismatch")
+  | None ->
+      let node = make class_name handler in
+      if bind (node_name, node) then Ok node else Problem (Sexp.Str "bind-failed")
 
 let unbind name =
   match lookup name with

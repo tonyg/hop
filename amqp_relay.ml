@@ -5,16 +5,35 @@ open Amqp_spec
 open Amqp_wireformat
 
 type connection_t = {
-    n: Node.t;
+    peername: Unix.sockaddr;
     mtx: Mutex.t;
     cin: in_channel;
     cout: out_channel;
+    name: Uuid.t;
     mutable input_buf: string;
     mutable output_buf: Buffer.t;
     mutable frame_max: int;
     mutable connection_closed: bool;
     mutable recent_queue_name: string option;
+    mutable delivery_tag: int
   }
+
+let initial_frame_size = frame_min_size
+let suggested_frame_max = 131072
+
+let amqp_boot (peername, mtx, cin, cout) = {
+  peername = peername;
+  mtx = mtx;
+  cin = cin;
+  cout = cout;
+  name = Uuid.create ();
+  input_buf = String.create initial_frame_size;
+  output_buf = Buffer.create initial_frame_size;
+  frame_max = initial_frame_size;
+  connection_closed = false;
+  recent_queue_name = None;
+  delivery_tag = 1 (* Not 0: 0 means "all deliveries" in an ack *)
+}
 
 let read_frame conn =
   let frame_type = input_byte conn.cin in
@@ -103,14 +122,29 @@ let send_method conn channel m =
     write_frame conn frame_method channel;
     flush conn.cout)
 
+let send_content_method conn channel m p body_str =
+  with_conn_mutex conn (fun () ->
+    serialize_method conn.output_buf m;
+    write_frame conn frame_method 1;
+    serialize_header conn.output_buf (String.length body_str) p;
+    write_frame conn frame_header 1;
+    send_content_body conn 1 body_str;
+    flush conn.cout)
+
 let send_error conn code message =
   if conn.connection_closed
   then
     ()
   else
+    conn.connection_closed <- true;
     let m = Connection_close (code, message, 0, 0) in
     Log.warn "Sending error" [sexp_of_method m];
     send_method conn 0 m
+
+let send_warning conn code message =
+  let m = Channel_close (code, message, 0, 0) in
+  Log.warn "Sending warning" [sexp_of_method m];
+  send_method conn 1 m
 
 let issue_banner cin cout =
   let handshake = String.create 8 in
@@ -121,8 +155,62 @@ let issue_banner cin cout =
     else true
   with End_of_file -> false
 
-let amqp_handler mtx cin cout n m =
-  die not_implemented "TODO:amqp_handler"
+let reply_to_declaration conn status ok_fn =
+  match Message.message_of_sexp status with
+  | Message.Create_ok info ->
+      send_method conn 1 (ok_fn info)
+  | Message.Create_failed reason ->
+      (match reason with
+      | Sexp.Str s -> send_warning conn precondition_failed s
+      | _ -> send_warning conn precondition_failed "See server logs for details")
+  | _ -> die internal_error "Declare reply malformed"
+
+let make_queue_declare_ok info =
+  match info with
+  | Sexp.Str queue_name -> Queue_declare_ok (queue_name, Int32.zero, Int32.zero)
+  | _ -> die internal_error "Unusable queue name in declare response"
+
+let send_delivery conn consumer_tag body_sexp =
+  match body_sexp with
+  | Sexp.Hint {Sexp.hint = Sexp.Str "amqp";
+	       Sexp.body = Sexp.Arr [Sexp.Str exchange;
+				     Sexp.Str routing_key;
+				     properties_sexp;
+				     Sexp.Str body_str]} ->
+      let tag = with_conn_mutex conn (fun () ->
+	let v = conn.delivery_tag in conn.delivery_tag <- v + 1; v)
+      in
+      send_content_method conn 1
+	(Basic_deliver (consumer_tag, Int64.of_int tag, false, exchange, routing_key))
+	(properties_of_sexp basic_class_id properties_sexp)
+	body_str
+  | _ -> die internal_error "Malformed AMQP message body sexp"
+
+let amqp_handler conn n m_sexp =
+  try
+    (match Message.message_of_sexp m_sexp with
+    | Message.Post (Sexp.Str "Exchange_declare_reply", status, _) ->
+	reply_to_declaration conn status (fun (_) -> Exchange_declare_ok)
+    | Message.Post (Sexp.Str "Queue_declare_reply", status, _) ->
+	reply_to_declaration conn status make_queue_declare_ok
+    | Message.Post (Sexp.Str "Queue_bind_reply", status, _) ->
+	(match Message.message_of_sexp status with
+	| Message.Subscribe_ok _ -> send_method conn 1 Queue_bind_ok
+	| _ -> die internal_error "Queue bind reply malformed")
+    | Message.Post (Sexp.Arr [Sexp.Str "Basic_consume_reply"; Sexp.Str consumer_tag], status, _) ->
+	(match Message.message_of_sexp status with
+	| Message.Subscribe_ok _ -> send_method conn 1 (Basic_consume_ok consumer_tag)
+	| _ -> die internal_error "Basic consume reply malformed")
+    | Message.Post (Sexp.Arr [Sexp.Str "delivery"; Sexp.Str consumer_tag], body, _) ->
+	send_delivery conn consumer_tag body
+    | _ ->
+	Log.warn "AMQP outbound relay ignoring message" [m_sexp])
+  with
+  | Amqp_exception (code, message) ->
+      send_error conn code message
+  | exn ->
+      send_error conn internal_error "";
+      raise exn
 
 let get_recent_queue_name conn =
   match conn.recent_queue_name with
@@ -141,38 +229,66 @@ let handle_method conn channel m =
       Log.info "Client closed AMQP connection" [Sexp.Str (string_of_int code); Sexp.Str text];
       send_method conn channel Connection_close_ok;
       conn.connection_closed <- true
-  | Channel_open -> send_method conn channel Channel_open_ok
+  | Channel_open ->
+      conn.delivery_tag <- 1;
+      send_method conn channel Channel_open_ok
   | Channel_close (code, text, _, _) ->
       Log.info "Client closed AMQP channel" [Sexp.Str (string_of_int code); Sexp.Str text];
       send_method conn channel Channel_close_ok;
   | Exchange_declare (exchange, type_, passive, durable, no_wait, arguments) ->
-      Log.info "XDeclare%%%" [Sexp.Str exchange; Sexp.Str type_];
-      send_method conn channel Exchange_declare_ok
+      Node.send_ignore "factory" (Message.create (Sexp.Str type_,
+						  Sexp.Arr [Sexp.Str exchange],
+						  Sexp.Str conn.name,
+						  Sexp.Str "Exchange_declare_reply"))
   | Queue_declare (queue, passive, durable, exclusive, auto_delete, no_wait, arguments) ->
       let queue = (if queue = "" then Uuid.create () else queue) in
-      Log.info "QDeclare%%%" [Sexp.Str queue];
       conn.recent_queue_name <- Some queue;
-      send_method conn channel (Queue_declare_ok (queue, Int32.of_int 0, Int32.of_int 0))
+      Node.send_ignore "factory" (Message.create (Sexp.Str "queue",
+						  Sexp.Arr [Sexp.Str queue],
+						  Sexp.Str conn.name,
+						  Sexp.Str "Queue_declare_reply"))
   | Queue_bind (queue, exchange, routing_key, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
-      Log.info "QBind%%%" [Sexp.Str queue; Sexp.Str exchange; Sexp.Str routing_key];
-      send_method conn channel Queue_bind_ok
+      if not (Node.exists queue)
+      then send_warning conn not_found "Queue not found"
+      else
+	if Node.send exchange (Message.subscribe (Sexp.Str routing_key,
+						  Sexp.Str queue,
+						  Sexp.Str "",
+						  Sexp.Str conn.name,
+						  Sexp.Str "Queue_bind_reply"))
+	then ()
+	else send_warning conn not_found "Exchange not found"
   | Basic_consume (queue, consumer_tag, no_local, no_ack, exclusive, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
-      Log.info "Consume%%%" [Sexp.Str queue; Sexp.Str consumer_tag];
-      send_method conn channel (Basic_consume_ok consumer_tag)
+      let consumer_tag = (if consumer_tag = "" then Uuid.create () else consumer_tag) in
+      if Node.send queue (Message.subscribe
+			    (Sexp.Str "",
+			     Sexp.Str conn.name,
+			     Sexp.Arr [Sexp.Str "delivery"; Sexp.Str consumer_tag],
+			     Sexp.Str conn.name,
+			     Sexp.Arr [Sexp.Str "Basic_consume_reply"; Sexp.Str consumer_tag]))
+      then ()
+      else send_warning conn not_found "Queue not found"
   | Basic_publish (exchange, routing_key, false, false) ->
       let (_, (body_size, properties)) = next_header conn in
       let body = recv_content_body conn body_size in
-      Log.info "Publish%%%" [Sexp.Str exchange; Sexp.Str routing_key;
-			     sexp_of_properties properties; Sexp.Str body]
+      if Node.post exchange
+	  (Sexp.Str routing_key)
+	  (Sexp.Hint {Sexp.hint = Sexp.Str "amqp";
+		      Sexp.body = Sexp.Arr [Sexp.Str exchange;
+					    Sexp.Str routing_key;
+					    sexp_of_properties properties;
+					    Sexp.Str body]})
+	  (Sexp.Str "")
+      then ()
+      else send_warning conn not_found "Exchange not found"
+  | Basic_ack (delivery_tag, multiple) ->
+      ()
   | _ ->
       let (cid, mid) = method_index m in
       die not_implemented (Printf.sprintf "Unsupported method (or method arguments) %s"
 			     (method_name cid mid))
-
-let initial_frame_size = frame_min_size
-let suggested_frame_max = 131072
 
 let server_properties = table_of_list [
   ("product", Table_string App_info.product);
@@ -233,18 +349,8 @@ let handshake_and_tune conn =
   Log.info "Connected to vhost" [Sexp.Str virtual_host];
   send_method conn 0 Connection_open_ok
 
-let amqp_mainloop peername mtx cin cout n =
-  let conn = {
-    n = n;
-    mtx = mtx;
-    cin = cin;
-    cout = cout;
-    input_buf = String.create initial_frame_size;
-    output_buf = Buffer.create initial_frame_size;
-    frame_max = initial_frame_size;
-    connection_closed = false;
-    recent_queue_name = None;
-  } in
+let amqp_mainloop conn n =
+  Node.bind_ignore (conn.name, n);
   (try
     handshake_and_tune conn;
     while not conn.connection_closed do
@@ -257,4 +363,5 @@ let amqp_mainloop peername mtx cin cout n =
   )
 
 let start (s, peername) =
-  Connections.start_connection "amqp" issue_banner amqp_handler amqp_mainloop (s, peername)
+  Connections.start_connection "amqp" issue_banner
+    amqp_boot amqp_handler amqp_mainloop (s, peername)

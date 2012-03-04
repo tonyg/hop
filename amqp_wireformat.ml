@@ -65,6 +65,9 @@ let read_timestamp input_buf = read_longlong input_buf
 let read_table input_buf =
   { table_body = Encoded_table (read_longstr input_buf) }
 
+let unsigned_to_signed v delta = if v >= (delta / 2) then v - delta else v
+let signed_to_unsigned v delta = if v < 0 then v + delta else v
+
 let
 rec decode_named_fields input_buf =
   if Ibuffer.remaining input_buf = 0
@@ -84,13 +87,9 @@ and decode_unnamed_fields input_buf =
 and read_table_value input_buf =
   match Ibuffer.next_char input_buf with
   | 't' -> Table_bool (read_octet input_buf <> 0)
-  | 'b' ->
-      let v = read_octet input_buf in
-      Table_signed_byte (if v >= 128 then v - 256 else v)
+  | 'b' -> Table_signed_byte (unsigned_to_signed (read_octet input_buf) 256)
   | 'B' -> Table_unsigned_byte (read_octet input_buf)
-  | 'U' ->
-      let v = read_short input_buf in
-      Table_signed_short (if v >= 32768 then v - 65536 else v)
+  | 'U' -> Table_signed_short (unsigned_to_signed (read_short input_buf) 65536)
   | 'u' -> Table_unsigned_short (read_short input_buf)
   | 'I' -> Table_signed_long (read_long input_buf)
   | 'i' -> Table_unsigned_long (read_long input_buf)
@@ -170,9 +169,9 @@ and write_table_value output_buf f =
   match f with
   | Table_bool true -> wcode 't'; write_octet output_buf 1
   | Table_bool false -> wcode 't'; write_octet output_buf 0
-  | Table_signed_byte v -> wcode 'b'; write_octet output_buf (if v < 0 then v + 256 else v)
+  | Table_signed_byte v -> wcode 'b'; write_octet output_buf (signed_to_unsigned v 256)
   | Table_unsigned_byte v -> wcode 'B'; write_octet output_buf v
-  | Table_signed_short v -> wcode 'U'; write_short output_buf (if v < 0 then v + 65536 else v)
+  | Table_signed_short v -> wcode 'U'; write_short output_buf (signed_to_unsigned v 65536)
   | Table_unsigned_short v -> wcode 'u'; write_short output_buf v
   | Table_signed_long v -> wcode 'I'; write_long output_buf v
   | Table_unsigned_long v -> wcode 'i'; write_long output_buf v
@@ -211,7 +210,7 @@ let sexp_of_long x = Str (Int32.to_string x)
 let sexp_of_longlong x = Str (Int64.to_string x)
 let sexp_of_shortstr x = Str x
 let sexp_of_longstr x = Str x
-let sexp_of_bit x = if x then Str "1" else Str "0"
+let sexp_of_bit x = if x then Str "1" else Str ""
 let sexp_of_timestamp x = Str (Int64.to_string x)
 
 let rec
@@ -219,26 +218,26 @@ let rec
 			    body = Arr (List.map sexp_of_named_field (decoded_table x))}
 and sexp_of_named_field (s, f) = Arr [Str s; sexp_of_unnamed_field f]
 and sexp_of_unnamed_field f =
+  let h hs v = Hint {hint = Str hs; body = v} in
   match f with
-  | Table_bool true -> Str "1"
-  | Table_bool false -> Str "0"
-  | Table_signed_byte v -> sexp_of_octet (if v < 0 then v + 256 else v)
-  | Table_unsigned_byte v -> sexp_of_octet v
-  | Table_signed_short v -> sexp_of_short (if v < 0 then v + 65536 else v)
-  | Table_unsigned_short v -> sexp_of_short  v
-  | Table_signed_long v -> sexp_of_long v
-  | Table_unsigned_long v -> Hint {hint = Str "unsigned"; body = sexp_of_long v}
-  | Table_signed_longlong v -> sexp_of_longlong v
-  | Table_unsigned_longlong v -> Hint {hint = Str "unsigned"; body = sexp_of_longlong v}
-  | Table_float v -> Hint {hint = Str "float"; body = Str v}
-  | Table_double v -> Hint {hint = Str "double"; body = Str v}
-  | Table_decimal (scale, v) -> Hint {hint = Str "decimal";
-				      body = Arr [Arr [Str "scale"; sexp_of_octet scale];
-						  Arr [Str "value"; sexp_of_long v]]}
-  | Table_short_string v -> Str v
+  | Table_bool true -> h "t" (Str "1")
+  | Table_bool false -> h "t" (Str "")
+  | Table_signed_byte v -> h "b" (sexp_of_octet (signed_to_unsigned v 256))
+  | Table_unsigned_byte v -> h "B" (sexp_of_octet v)
+  | Table_signed_short v -> h "U" (sexp_of_short (signed_to_unsigned v 65536))
+  | Table_unsigned_short v -> h "u" (sexp_of_short v)
+  | Table_signed_long v -> h "I" (sexp_of_long v)
+  | Table_unsigned_long v -> h "i" (sexp_of_long v)
+  | Table_signed_longlong v -> h "L" (sexp_of_longlong v)
+  | Table_unsigned_longlong v -> h "l" (sexp_of_longlong v)
+  | Table_float v -> h "f" (Str v)
+  | Table_double v -> h "d" (Str v)
+  | Table_decimal (scale, v) -> h "D" (Arr [Arr [Str "scale"; sexp_of_octet scale];
+					    Arr [Str "value"; sexp_of_long v]])
+  | Table_short_string v -> h "s" (Str v)
   | Table_string v -> Str v
-  | Table_array vs -> Hint {hint = Str "array"; body = Arr (List.map sexp_of_unnamed_field vs)}
-  | Table_timestamp v -> Hint {hint = Str "timestamp"; body = sexp_of_longlong v}
+  | Table_array vs -> h "A" (Arr (List.map sexp_of_unnamed_field vs))
+  | Table_timestamp v -> h "T" (sexp_of_longlong v)
   | Table_table t -> sexp_of_table t
   | Table_void -> Arr []
 
@@ -253,6 +252,54 @@ let reserved_value_longstr = ""
 let reserved_value_bit = false
 let reserved_value_timestamp = Int64.zero
 let reserved_value_table = { table_body = Encoded_table "" }
+
+let octet_of_sexp v = match v with Str x -> int_of_string x | _ -> reserved_value_octet
+let short_of_sexp v = match v with Str x -> int_of_string x | _ -> reserved_value_short
+let long_of_sexp v = match v with Str x -> Int32.of_string x | _ -> reserved_value_long
+let longlong_of_sexp v = match v with Str x -> Int64.of_string x | _ -> reserved_value_longlong
+let shortstr_of_sexp v = match v with Str x -> x | _ -> reserved_value_shortstr
+let longstr_of_sexp v = match v with Str x -> x | _ -> reserved_value_longstr
+let bit_of_sexp v = match v with Str x -> x <> "" | _ -> reserved_value_bit
+let timestamp_of_sexp v = match v with Str x -> Int64.of_string x | _ -> reserved_value_timestamp
+
+let rec table_of_sexp v =
+  match v with
+  | Hint {hint = Str "table"; body = Arr field_sexps} ->
+      table_of_list (List.map named_sexp_field field_sexps)
+  | _ ->
+      table_of_list []
+and named_sexp_field v =
+  match v with
+  | Arr [Str s; f] -> (s, field_of_sexp f)
+  | _ -> ("", Table_void)
+and field_of_sexp v =
+  match v with
+  | Hint {hint = Str "t"; body = Str x} ->
+      Table_bool (x <> "")
+  | Hint {hint = Str "b"; body = v} ->
+      Table_signed_byte (unsigned_to_signed (octet_of_sexp v) 256)
+  | Hint {hint = Str "B"; body = v} ->
+      Table_unsigned_byte (octet_of_sexp v)
+  | Hint {hint = Str "U"; body = v} ->
+      Table_signed_short (unsigned_to_signed (short_of_sexp v) 65536)
+  | Hint {hint = Str "u"; body = v} ->
+      Table_unsigned_short (short_of_sexp v)
+  | Hint {hint = Str "I"; body = v} -> Table_signed_long (long_of_sexp v)
+  | Hint {hint = Str "i"; body = v} -> Table_unsigned_long (long_of_sexp v)
+  | Hint {hint = Str "L"; body = v} -> Table_signed_longlong (longlong_of_sexp v)
+  | Hint {hint = Str "l"; body = v} -> Table_unsigned_longlong (longlong_of_sexp v)
+  | Hint {hint = Str "f"; body = (Str v)} -> Table_float v
+  | Hint {hint = Str "d"; body = (Str v)} -> Table_double v
+  | Hint {hint = Str "D"; body = (Arr [Arr [Str "scale"; scale];
+				       Arr [Str "value"; v]])} ->
+      Table_decimal (octet_of_sexp scale, long_of_sexp v)
+  | Hint {hint = Str "s"; body = (Str v)} -> Table_short_string v
+  | Str v -> Table_string v
+  | Hint {hint = Str "A"; body = Arr vs} -> Table_array (List.map field_of_sexp vs)
+  | Hint {hint = Str "T"; body = v} -> Table_timestamp (longlong_of_sexp v)
+  | Hint {hint = Str "table"; body = _} -> Table_table (table_of_sexp v)
+  | Arr [] -> Table_void
+  | _ -> Table_void
 
 let field_lookup k def fs =
   try List.assoc k fs

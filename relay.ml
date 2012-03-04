@@ -38,10 +38,12 @@ let issue_banner cin cout =
 			Str "", Str ""));
   true
 
-let relay_handler mtx cin cout n m =
+let relay_boot (peername, mtx, cin, cout) = (peername, mtx, cin, cout)
+
+let relay_handler (_, mtx, _, cout) _ m =
   Util.with_mutex mtx (output_sexp cout) m
 
-let relay_mainloop peername mtx cin cout n =
+let relay_mainloop (peername, mtx, cin, cout) n =
   let write_sexp = Util.with_mutex mtx (output_sexp cout) in
   (try
     while true do
@@ -55,4 +57,5 @@ let relay_mainloop peername mtx cin cout n =
   )
 
 let start (s, peername) =
-  Connections.start_connection "relay" issue_banner relay_handler relay_mainloop (s, peername)
+  Connections.start_connection "relay" issue_banner
+    relay_boot relay_handler relay_mainloop (s, peername)

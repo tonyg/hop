@@ -26,14 +26,25 @@ let create source subs filter sink name reply_sink reply_name =
   sub
 
 let delete source subs uuid =
-  (try (StringMap.find uuid !subs).live <- false
-  with Not_found -> ());
-  subs := StringMap.remove uuid !subs
+  try
+    let sub = StringMap.find uuid !subs in
+    sub.live <- false;
+    subs := StringMap.remove uuid !subs;
+    Some sub
+  with Not_found ->
+    None
 
-let send_to_subscription source subs sub body =
+let lookup subs uuid =
+  try Some (StringMap.find uuid !subs)
+  with Not_found -> None
+
+let send_to_subscription' source subs sub body delete_action =
   if not sub.live
   then false
   else
     if Node.post sub.sink sub.name body (Sexp.Str sub.uuid)
     then true
-    else (delete source subs sub.uuid; false)
+    else (delete_action sub.uuid; false)
+
+let send_to_subscription source subs sub body =
+  send_to_subscription' source subs sub body (fun (uuid) -> delete source subs uuid)

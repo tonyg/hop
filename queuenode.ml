@@ -1,4 +1,5 @@
 open Sexp
+open Status
 
 type t = {
     name: string;
@@ -58,7 +59,7 @@ let shoveller info =
 	info.waiters <- Fqueue.push_back info.waiters sub;
 	loop ()
     | Message.Unsubscribe (Str token) ->
-	Subscription.delete info.name info.subscriptions token;
+	ignore (Subscription.delete info.name info.subscriptions token);
 	loop ()
     | m ->
 	Util.message_not_understood "queue" m;
@@ -77,9 +78,9 @@ let queue_factory arg =
       } in
       ignore (Util.create_thread name None shoveller info);
       let queue_handler n sexp = Squeue.add (Message.message_of_sexp sexp) info.ch in
-      Node.make_named classname name queue_handler
+      replace_ok (Node.make_idempotent_named classname name queue_handler) (Str name)
   | _ ->
-      Some (Str "bad-arg")
+      Problem (Str "bad-arg")
 
 let init () =
   Factory.register_class classname queue_factory

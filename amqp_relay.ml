@@ -365,3 +365,9 @@ let amqp_mainloop conn n =
 let start (s, peername) =
   Connections.start_connection "amqp" issue_banner
     amqp_boot amqp_handler amqp_mainloop (s, peername)
+
+let init () =
+  Node.send_ignore "factory" (Message.create (Sexp.Str "direct",
+					      Sexp.Arr [Sexp.Str "amq.direct"],
+					      Sexp.Str "", Sexp.Str ""));
+  ignore (Util.create_thread "AMQP listener" None (Net.start_net Amqp_spec.port) start)

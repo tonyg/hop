@@ -250,7 +250,7 @@ let handle_method conn channel m =
   | Queue_bind (queue, exchange, routing_key, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
       if not (Node.exists queue)
-      then send_warning conn not_found "Queue not found"
+      then send_warning conn not_found ("Queue "^queue^" not found")
       else
 	if Node.send exchange (Message.subscribe (Sexp.Str routing_key,
 						  Sexp.Str queue,
@@ -258,7 +258,7 @@ let handle_method conn channel m =
 						  Sexp.Str conn.name,
 						  Sexp.Str "Queue_bind_reply"))
 	then ()
-	else send_warning conn not_found "Exchange not found"
+	else send_warning conn not_found ("Exchange "^exchange^" not found")
   | Basic_consume (queue, consumer_tag, no_local, no_ack, exclusive, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
       let consumer_tag = (if consumer_tag = "" then Uuid.create () else consumer_tag) in
@@ -269,7 +269,7 @@ let handle_method conn channel m =
 			     Sexp.Str conn.name,
 			     Sexp.Arr [Sexp.Str "Basic_consume_reply"; Sexp.Str consumer_tag]))
       then ()
-      else send_warning conn not_found "Queue not found"
+      else send_warning conn not_found ("Queue "^queue^" not found")
   | Basic_publish (exchange, routing_key, false, false) ->
       let (_, (body_size, properties)) = next_header conn in
       let body = recv_content_body conn body_size in
@@ -282,7 +282,7 @@ let handle_method conn channel m =
 					    Sexp.Str body]})
 	  (Sexp.Str "")
       then ()
-      else send_warning conn not_found "Exchange not found"
+      else send_warning conn not_found ("Exchange "^exchange^" not found")
   | Basic_ack (delivery_tag, multiple) ->
       ()
   | _ ->

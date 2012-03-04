@@ -41,7 +41,7 @@ let issue_banner cin cout =
 let relay_boot (peername, mtx, cin, cout) = (peername, mtx, cin, cout)
 
 let relay_handler (_, mtx, _, cout) _ m =
-  Util.with_mutex mtx (output_sexp cout) m
+  Util.with_mutex mtx (output_sexp_and_flush cout) m
 
 let relay_mainloop (peername, mtx, cin, cout) n =
   let write_sexp = Util.with_mutex mtx (output_sexp cout) in

@@ -2,6 +2,8 @@ open Sexp
 
 exception Amqp_exception of (int * string)
 
+let die code message = raise (Amqp_exception (code, message))
+
 type octet_t = int
 type short_t = int
 type long_t = int32
@@ -108,8 +110,7 @@ and read_table_value input_buf =
   | 'T' -> Table_timestamp (read_longlong input_buf)
   | 'F' -> Table_table { table_body = Encoded_table (read_longstr input_buf) }
   | 'V' -> Table_void
-  | c -> raise (Amqp_exception (502 (*syntax-error*),
-				Printf.sprintf "Unknown table field type code '%c'" c))
+  | c -> die 502 (*syntax-error*) (Printf.sprintf "Unknown table field type code '%c'" c)
 
 and decoded_table t =
   match t.table_body with
@@ -252,3 +253,15 @@ let reserved_value_longstr = ""
 let reserved_value_bit = false
 let reserved_value_timestamp = Int64.zero
 let reserved_value_table = { table_body = Encoded_table "" }
+
+let field_lookup k def fs =
+  try List.assoc k fs
+  with Not_found -> def
+
+let field_lookup_some k fs =
+  try Some (List.assoc k fs)
+  with Not_found -> None
+
+let table_lookup k t = List.assoc k (decoded_table t)
+let table_lookup_default k def t = field_lookup k def (decoded_table t)
+let table_lookup_some k t = field_lookup_some k (decoded_table t)

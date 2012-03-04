@@ -10,6 +10,8 @@ let create s ofs len = {
   buf = s
 }
 
+let of_string s = create s 0 (String.length s)
+
 let sub b ofs len =
   if b.pos + ofs + len > b.limit
   then

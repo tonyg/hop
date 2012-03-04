@@ -25,7 +25,7 @@ let hook_log () =
   Log.hook := new_hook
 
 let _ =
-  printf "ocamlmsg ALPHA, Copyright (C) 2012 Tony Garnock-Jones. All rights reserved.\n%!";
+  printf "%s %s, %s %s\n%!" App_info.product App_info.version App_info.copyright App_info.licence;
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Uuid.init ();
   Factory.init ();

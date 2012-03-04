@@ -206,7 +206,7 @@ def print_codec():
     print 'let method_name class_index method_index = match (class_index, method_index) with'
     for m in methods:
         print '  | (%d, %d) -> "%s"' % (m.class_index, m.index, ctor(m.full_name))
-    print '  | _ -> "??unknownmethod??"'
+    print '  | _ -> Printf.sprintf "unknown(%d/%d)" class_index method_index'
     print
     print 'let read_method class_index method_index input_buf = match (class_index, method_index) with'
     for m in methods:
@@ -246,6 +246,16 @@ def print_codec():
                 acc.flush()
                 print '      write_%s output_buf %s;' % (mlify(f.type), source)
         print '      ()'
+    print
+    print 'let sexp_of_properties p = match p with '
+    for c in classes:
+        if c.fields:
+            print c.match_clause
+            print '      let fields__ = [] in'
+            for f in reversed(c.accessible_fields):
+                print '      let fields__ = (match %s with Some v -> Arr [Str "%s"; sexp_of_%s(v)] :: fields__ | None -> fields__) in' % \
+                    (mlify(f.name), f.name, mlify(f.type))
+            print '      Arr fields__'
     print
     print 'let read_properties class_index input_buf = match class_index with'
     for c in classes:

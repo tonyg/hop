@@ -19,20 +19,23 @@ let lookup_class name =
 let factory_handler n sexp =
   match Message.message_of_sexp sexp with
   | Message.Create (Str classname, arg, Str reply_sink, Str reply_name) ->
-      (match lookup_class classname with
-      | Some factory ->
-	  let reply =
-	    match factory arg with
+      let reply =
+	match lookup_class classname with
+	| Some factory ->
+	    (match factory arg with
 	    | Status.Ok info ->
-		Log.info "Node create ok" [Str classname; arg; Str reply_sink; Str reply_name];
+		Log.info "Node create ok"
+		  [Str classname; arg; Str reply_sink; Str reply_name; info];
 		Message.create_ok info
 	    | Status.Problem explanation ->
-		Log.info "Node create failed" [Str classname; arg; Str reply_sink; Str reply_name];
-		Message.create_failed explanation
-	  in
-	  Node.post_ignore reply_sink (Str reply_name) reply (Str "")
-      | None ->
-	  Log.warn "Node class not found" [Str classname])
+		Log.info "Node create failed"
+		  [Str classname; arg; Str reply_sink; Str reply_name; explanation];
+		Message.create_failed (Arr [Str "constructor"; explanation]))
+	| None ->
+	    Log.warn "Node class not found" [Str classname];
+	    Message.create_failed (Arr [Str "factory"; Str "class-not-found"])
+      in
+      Node.post_ignore reply_sink (Str reply_name) reply (Str "")
   | m ->
       Util.message_not_understood "factory" m
 

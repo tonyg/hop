@@ -155,14 +155,26 @@ let issue_banner cin cout =
     else true
   with End_of_file -> false
 
+let reference_to_logs = "See server logs for details"
+let extract_str v =
+  match v with
+  | Sexp.Str s -> s
+  | _ -> reference_to_logs
+
 let reply_to_declaration conn status ok_fn =
   match Message.message_of_sexp status with
   | Message.Create_ok info ->
       send_method conn 1 (ok_fn info)
   | Message.Create_failed reason ->
       (match reason with
-      | Sexp.Str s -> send_warning conn precondition_failed s
-      | _ -> send_warning conn precondition_failed "See server logs for details")
+      | Sexp.Arr [Sexp.Str "factory"; Sexp.Str "class-not-found"] ->
+	  send_error conn command_invalid "Object type not supported by server"
+      | Sexp.Arr [Sexp.Str "constructor"; Sexp.Str "class-mismatch"] ->
+	  send_error conn not_allowed "Redeclaration with different object type not permitted"
+      | Sexp.Arr [Sexp.Str who; explanation] ->
+	  send_warning conn precondition_failed (who^" failed: "^(extract_str explanation))
+      | _ ->
+	  send_warning conn precondition_failed reference_to_logs)
   | _ -> die internal_error "Declare reply malformed"
 
 let make_queue_declare_ok info =

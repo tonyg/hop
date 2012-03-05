@@ -247,6 +247,8 @@ let handle_method conn channel m =
   | Channel_close (code, text, _, _) ->
       Log.info "Client closed AMQP channel" [Sexp.Str (string_of_int code); Sexp.Str text];
       send_method conn channel Channel_close_ok;
+  | Channel_close_ok ->
+      ()
   | Exchange_declare (exchange, type_, passive, durable, no_wait, arguments) ->
       Node.send_ignore "factory" (Message.create (Sexp.Str type_,
 						  Sexp.Arr [Sexp.Str exchange],

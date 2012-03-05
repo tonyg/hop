@@ -13,6 +13,7 @@ let _ =
   Uuid.init ();
   Factory.init ();
   Queuenode.init ();
+  Fanoutnode.init ();
   Directnode.init ();
   hook_log ();
   Amqp_relay.init ();

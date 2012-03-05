@@ -29,7 +29,7 @@ let rec do_burst info n =
 	let (body, new_backlog) = Fqueue.really_pop_front info.backlog in
 	let (sub, new_waiters) = Fqueue.really_pop_front info.waiters in
 	info.waiters <- new_waiters;
-	if Subscription.send_to_subscription info.name info.subscriptions sub body
+	if Subscription.send_to_subscription info.subscriptions sub body
 	then
 	  (info.waiters <- Fqueue.push_back info.waiters sub;
 	   info.backlog <- new_backlog;
@@ -53,13 +53,11 @@ let shoveller info =
 	loop ()
     | Message.Subscribe (filter, Str sink, name, Str reply_sink, reply_name) ->
 	let sub =
-	  Subscription.create info.name info.subscriptions
-	    filter sink name reply_sink reply_name
-	in
+	  Subscription.create info.subscriptions filter sink name reply_sink reply_name in
 	info.waiters <- Fqueue.push_back info.waiters sub;
 	loop ()
     | Message.Unsubscribe (Str token) ->
-	ignore (Subscription.delete info.name info.subscriptions token);
+	ignore (Subscription.delete info.subscriptions token);
 	loop ()
     | m ->
 	Util.message_not_understood "queue" m;

@@ -17,4 +17,5 @@ let _ =
   Directnode.init ();
   hook_log ();
   Amqp_relay.init ();
+  (* Speedtest.init (); *)
   Net.start_net 5671 Relay.start

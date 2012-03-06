@@ -12,14 +12,6 @@
 	"args": ["reason"]
     },
     {
-	"selector": "subscribed",
-	"args": ["source", "filter", "sink", "name"]
-    },
-    {
-	"selector": "unsubscribed",
-	"args": ["source", "filter", "sink", "name"]
-    },
-    {
 	"selector": "post",
 	"args": ["name", "body", "token"]
     },

@@ -3,6 +3,7 @@ open Printf
 open Thread
 open Sexp
 
+let connection_mtx = Mutex.create ()
 let connection_count = ref 0
 
 let endpoint_name n =
@@ -48,9 +49,9 @@ let connection_main class_name peername cin cout issue_banner boot_fn node_fn ma
 let start_connection' class_name issue_banner boot_fn node_fn mainloop (s, peername) =
   let cin = in_channel_of_descr s in
   let cout = out_channel_of_descr s in
-  connection_count := !connection_count + 1;
+  Util.with_mutex0 connection_mtx (fun () -> connection_count := !connection_count + 1);
   connection_main class_name peername cin cout issue_banner boot_fn node_fn mainloop;
-  connection_count := !connection_count - 1;
+  Util.with_mutex0 connection_mtx (fun () -> connection_count := !connection_count - 1);
   (try flush cout with _ -> ());
   close s
 

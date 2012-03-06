@@ -4,14 +4,17 @@ open Datastructures
 
 type factory_t = Sexp.t -> (Sexp.t, Sexp.t) Status.t
 
+let mutex = Mutex.create ()
 let classes = ref StringMap.empty
 
 let register_class name factory =
-  if StringMap.mem name !classes
-  then (Log.error "Duplicate node class name" [Str name];
-	exit 1)
-  else (Log.info "Registered node class" [Str name];
-	classes := StringMap.add name factory !classes)
+  Util.with_mutex0 mutex
+    (fun () ->
+      if StringMap.mem name !classes
+      then (Log.error "Duplicate node class name" [Str name];
+	    exit 1)
+      else (Log.info "Registered node class" [Str name];
+	    classes := StringMap.add name factory !classes))
 
 let lookup_class name =
   try Some (StringMap.find name !classes)

@@ -9,6 +9,7 @@ and t = {
     handle_message: handle_message_t
   }
 
+let mutex = Mutex.create ()
 let directory = ref StringMap.empty
 
 let local_container_name () = "server"
@@ -23,18 +24,21 @@ let lookup name =
   try Some (StringMap.find name !directory)
   with Not_found -> None
 
-let exists name = StringMap.mem name !directory
+(* Approximate because it doesn't lock or run in a transaction *)
+let approx_exists name = StringMap.mem name !directory
 
 let bind (filter, node) =
   if filter = ""
   then (Log.warn "Binding to empty name forbidden" []; false)
   else
-    if StringMap.mem filter !directory
-    then false
-    else (directory := StringMap.add filter node !directory;
-	  node.names <- StringSet.add filter node.names;
-	  Log.info "Node bound" [Sexp.Str filter; Sexp.Str node.class_name];
-	  true)
+    Util.with_mutex0 mutex
+      (fun () ->
+	if StringMap.mem filter !directory
+	then false
+	else (directory := StringMap.add filter node !directory;
+	      node.names <- StringSet.add filter node.names;
+	      Log.info "Node bound" [Sexp.Str filter; Sexp.Str node.class_name];
+	      true))
 
 (* For use in factory constructor functions, hence the odd return type and values *)
 let make_named class_name node_name handler =
@@ -53,14 +57,16 @@ let make_idempotent_named class_name node_name handler =
       if bind (node_name, node) then Ok node else Problem (Sexp.Str "bind-failed")
 
 let unbind name =
-  match lookup name with
-  | Some n ->
-      Log.info "Node unbound" [Sexp.Str name; Sexp.Str n.class_name];
-      n.names <- StringSet.remove name n.names;
-      directory := StringMap.remove name !directory;
-      true
-  | None ->
-      false
+  Util.with_mutex0 mutex
+    (fun () ->
+      match lookup name with
+      | Some n ->
+	  Log.info "Node unbound" [Sexp.Str name; Sexp.Str n.class_name];
+	  n.names <- StringSet.remove name n.names;
+	  directory := StringMap.remove name !directory;
+	  true
+      | None ->
+	  false)
 
 let unbind_all n =
   StringSet.iter (fun name -> ignore (unbind name)) n.names;

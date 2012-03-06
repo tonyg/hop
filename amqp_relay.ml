@@ -265,7 +265,7 @@ let handle_method conn channel m =
 						  Sexp.Str "Queue_declare_reply"))
   | Queue_bind (queue, exchange, routing_key, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
-      if not (Node.exists queue)
+      if not (Node.approx_exists queue)
       then send_warning conn not_found ("Queue "^queue^" not found")
       else
 	if Node.send exchange (Message.subscribe (Sexp.Str routing_key,

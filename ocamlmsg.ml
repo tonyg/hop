@@ -15,6 +15,7 @@ let _ =
   Queuenode.init ();
   Fanoutnode.init ();
   Directnode.init ();
+  Meta.init ();
   hook_log ();
   Amqp_relay.init ();
   (* Speedtest.init (); *)

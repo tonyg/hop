@@ -14,7 +14,7 @@ let classname = "direct"
 let unsubscribe info uuid =
   Util.with_mutex0 info.mtx
     (fun () ->
-      match Subscription.delete info.subscriptions uuid with
+      match Subscription.delete info.name info.subscriptions uuid with
       | Some sub ->
 	  (match sub.Subscription.filter with
 	  | Str binding_key ->
@@ -46,7 +46,8 @@ let route_message info n sexp =
       Util.with_mutex0 info.mtx
 	(fun () ->
 	  let sub =
-	    Subscription.create info.subscriptions filter sink name reply_sink reply_name in
+	    Subscription.create
+	      info.name info.subscriptions filter sink name reply_sink reply_name in
 	  let old_set =
 	    (try StringMap.find binding_key info.routing_table with Not_found -> UuidSet.empty) in
 	  let new_set = UuidSet.add sub.Subscription.uuid old_set in

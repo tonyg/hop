@@ -12,7 +12,7 @@ let classname = "fanout"
 
 let unsubscribe info uuid =
   Util.with_mutex0 info.mtx
-    (fun () -> ignore (Subscription.delete info.subscriptions uuid))
+    (fun () -> ignore (Subscription.delete info.name info.subscriptions uuid))
 
 let route_message info n sexp =
   match Message.message_of_sexp sexp with
@@ -25,7 +25,8 @@ let route_message info n sexp =
   | Message.Subscribe (Str binding_key as filter, Str sink, name, Str reply_sink, reply_name) ->
       Util.with_mutex0 info.mtx
 	(fun () ->
-	  ignore (Subscription.create info.subscriptions filter sink name reply_sink reply_name))
+	  ignore (Subscription.create
+		    info.name info.subscriptions filter sink name reply_sink reply_name))
   | Message.Unsubscribe (Str token) ->
       unsubscribe info token
   | m ->

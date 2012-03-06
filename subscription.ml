@@ -12,7 +12,7 @@ type set_t = t StringMap.t ref
 
 let new_set () = ref StringMap.empty
 
-let create subs filter sink name reply_sink reply_name =
+let create source subs filter sink name reply_sink reply_name =
   let uuid = Uuid.create () in
   let sub = {
     live = true;
@@ -22,14 +22,16 @@ let create subs filter sink name reply_sink reply_name =
     name = name
   } in
   subs := StringMap.add uuid sub !subs;
+  Meta.announce_subscription source filter sink name true;
   Node.post_ignore reply_sink reply_name (Message.subscribe_ok (Sexp.Str uuid)) (Sexp.Str "");
   sub
 
-let delete subs uuid =
+let delete source subs uuid =
   try
     let sub = StringMap.find uuid !subs in
     sub.live <- false;
     subs := StringMap.remove uuid !subs;
+    Meta.announce_subscription source sub.filter sub.sink sub.name false;
     Some sub
   with Not_found ->
     None
@@ -46,5 +48,5 @@ let send_to_subscription' sub body delete_action =
     then true
     else (delete_action sub.uuid; false)
 
-let send_to_subscription subs sub body =
-  send_to_subscription' sub body (fun (uuid) -> delete subs uuid)
+let send_to_subscription source subs sub body =
+  send_to_subscription' sub body (fun (uuid) -> delete source subs uuid)

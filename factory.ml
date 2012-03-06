@@ -8,9 +8,10 @@ let classes = ref StringMap.empty
 
 let register_class name factory =
   if StringMap.mem name !classes
-  then (fprintf stderr "ERROR: Duplicate node class name %s\n%!" name;
+  then (Log.error "Duplicate node class name" [Str name];
 	exit 1)
-  else classes := StringMap.add name factory !classes
+  else (Log.info "Registered node class" [Str name];
+	classes := StringMap.add name factory !classes)
 
 let lookup_class name =
   try Some (StringMap.find name !classes)

@@ -83,14 +83,16 @@ let deserialize_header buf =
   (body_size, read_properties class_id buf)
 
 let send_content_body conn channel body =
-  let offset = ref 0 in
   let len = String.length body in
-  while (!offset) < len do
-    let snip_len = min conn.frame_max (len - !offset) in
-    Buffer.add_substring conn.output_buf body (!offset) snip_len;
-    write_frame conn frame_body channel;
-    offset := !offset + snip_len
-  done
+  let rec send_remainder offset =
+    if offset >= len
+    then ()
+    else
+      let snip_len = min conn.frame_max (len - offset) in
+      Buffer.add_substring conn.output_buf body offset snip_len;
+      write_frame conn frame_body channel;
+      send_remainder (offset + snip_len)
+  in send_remainder 0
 
 let next_frame conn required_type =
   let (frame_type, channel, length) = read_frame conn in

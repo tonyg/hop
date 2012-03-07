@@ -4,7 +4,10 @@ from __future__ import with_statement
 copyright_stmt = '(* Copyright (C) 2012 Tony Garnock-Jones. All rights reserved. *)'
 
 import sys
-import json
+try:
+    import json
+except:
+    import simplejson as json
 
 def mlify(s):
     s = s.replace('-', '_')

@@ -37,7 +37,6 @@ copyright_stmt = '''(* Copyright 2012 Tony Garnock-Jones <tonygarnockjones@gmail
 
 import sys
 import xml.dom.minidom
-from collections import namedtuple
 
 ###########################################################################
 # XML utils
@@ -114,27 +113,39 @@ class DatalikeMixin:
     def match_clause(self):
         return '  | ' + self.pattern() + ' ->'
 
-class Class(DatalikeMixin,
-            namedtuple('Class', 'index name fields methods'.split())):
+class Class(DatalikeMixin):
+    def __init__(self, index, name, fields, methods):
+        self.index = index
+        self.name = name
+        self.fields = fields
+        self.methods = methods
+
     @property
     def full_name(self):
         return self.name + '-properties'
 
-class Method(DatalikeMixin,
-             namedtuple('Method', ['class_name',
-                                   'class_index',
-                                   'has_content',
-                                   'deprecated',
-                                   'index',
-                                   'name',
-                                   'synchronous',
-                                   'responses',
-                                   'fields'])):
+class Method(DatalikeMixin):
+    def __init__(self, class_name, class_index, has_content, deprecated,
+                 index, name, synchronous, responses, fields):
+        self.class_name = class_name
+        self.class_index = class_index
+        self.has_content = has_content
+        self.deprecated = deprecated
+        self.index = index
+        self.name = name
+        self.synchronous = synchronous
+        self.responses = responses
+        self.fields = fields
+
     @property
     def full_name(self):
         return self.class_name + '-' + self.name
 
-Field = namedtuple('Field', 'name type reserved'.split())
+class Field:
+    def __init__(self, name, type, reserved):
+        self.name = name
+        self.type = type
+        self.reserved = reserved
 
 def load_fields(e):
     return [Field(attr(f, 'name'),

@@ -1,9 +1,48 @@
 <html>
   <head>
     <title>Ocamlmsg</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="ui.css">
+    <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="ui_main.js"></script>
   </head>
   <body>
-    <h1>Ocamlmsg</h1>
-    <p>Welcome to Ocamlmsg.</p>
+    <div id="page">
+      <div id="header">
+	<div class="mainmenu">
+	  <ul>
+	    <li><a href="/">Main page</a></li>
+	  </ul>
+	</div>
+	<div class="clear"></div>
+      </div>
+      <div class="content">
+	<h1>Ocamlmsg</h1>
+
+	<table>
+	  <tr>
+	    <th>Server Status</th>
+	    <td id="server_ok">&nbsp;</td>
+	  </tr>
+	</table>
+
+	<h2>Server statistics</h2>
+	<table>
+	  <tr>
+	    <th>Connection count</th>
+	    <td id="server_stats_connection_count"></td>
+	  </tr>
+	  <tr>
+	    <th>Boot time</th>
+	    <td id="server_stats_boot_time"></td>
+	  </tr>
+	  <tr>
+	    <th>Uptime</th>
+	    <td id="server_stats_uptime"></td>
+	  </tr>
+	</table>
+      </div>
+    </div>
+    <script>$(document).ready(ui_main);</script>
   </body>
 </html>

@@ -406,4 +406,4 @@ let init () =
   Node.send_ignore "factory" (Message.create (Sexp.Str "fanout",
 					      Sexp.Arr [Sexp.Str "amq.fanout"],
 					      Sexp.Str "", Sexp.Str ""));
-  ignore (Util.create_thread "AMQP listener" None (Net.start_net Amqp_spec.port) start)
+  ignore (Util.create_thread "AMQP listener" None (Net.start_net "AMQP" Amqp_spec.port) start)

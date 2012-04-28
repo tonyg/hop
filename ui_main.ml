@@ -15,26 +15,24 @@
 (* You should have received a copy of the GNU General Public License *)
 (* along with Ocamlmsg.  If not, see <http://www.gnu.org/licenses/>. *)
 
-let hook_log () =
-  let old_hook = !Log.hook in
-  let new_hook label body =
-    ignore (Node.post "system.log" (Sexp.Str label) body (Sexp.Str ""));
-    old_hook label body
-  in
-  Log.hook := new_hook
+open Html
 
-let _ =
-  Printf.printf "%s %s, %s\n%s\n%!"
-    App_info.product App_info.version App_info.copyright App_info.licence_blurb;
-  Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-  Uuid.init ();
-  Factory.init ();
-  Queuenode.init ();
-  Fanoutnode.init ();
-  Directnode.init ();
-  Meta.init ();
-  hook_log ();
-  Amqp_relay.init ();
-  Ui_main.init ();
-  (* Speedtest.init (); *)
-  Net.start_net "Hop" 5671 Relay.start
+let handle_dynamic_req r =
+  Httpd.http_error_html 500 "Not yet implemented" []
+
+let handle_req r =
+  if Util.starts_with r.Httpd.path "/_"
+  then handle_dynamic_req r
+  else
+    match r.Httpd.verb with
+    | "GET" -> Httpd_file.resp_file (Filename.concat "./web" r.Httpd.path)
+    | _ -> Httpd.http_error_html 400 ("Unsupported HTTP method "^r.Httpd.verb) []
+
+let start (s, peername) =
+  Util.create_thread (Connections.endpoint_name peername ^ " HTTP service")
+    None
+    (Httpd.main handle_req)
+    (s, peername)
+
+let init () =
+  ignore (Util.create_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)

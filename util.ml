@@ -44,3 +44,9 @@ let with_mutex m f arg =
     raise e
 
 let with_mutex0 m thunk = with_mutex m thunk ()
+
+let starts_with s1 s2 =
+  try Str.first_chars s1 (String.length s2) = s2 with _ -> false
+
+let ends_with s1 s2 =
+  try Str.last_chars s1 (String.length s2) = s2 with _ -> false

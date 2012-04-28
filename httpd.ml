@@ -94,6 +94,14 @@ let resp_html code reason extra_headers title content =
 let resp_html_ok extra_headers title content =
   resp_html 200 "OK" extra_headers title content
 
+let resp_plain code reason extra_headers text =
+  resp_generic code reason
+    (text_content_type_header :: extra_headers)
+    (Fixed text)
+
+let resp_plain_ok extra_headers text =
+  resp_plain 200 "OK" extra_headers text
+
 let resp_redirect_permanent new_path =
   resp_html_doc 301 "Moved permanently" ["Location", new_path]
     (html_error_doc 301 "Moved permanently"

@@ -53,8 +53,8 @@ let rec to_string j =
 and kv_to_string (k, v) =
   str_to_string k ^ ":" ^ to_string v
 
-let resp code reason j =
+let resp code reason extra_headers j =
   Httpd.resp_generic code reason
-    [Httpd.content_type_header_name, "application/json"]
+    ((Httpd.content_type_header_name, "application/json") :: extra_headers)
     (Httpd.Fixed (to_string j))
-let resp_ok j = resp 200 "OK" j
+let resp_ok extra_headers j = resp 200 "OK" extra_headers j

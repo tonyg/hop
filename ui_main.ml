@@ -54,14 +54,41 @@ let start (s, peername) =
 
 let boot_time = Unix.time ()
 let api_server_stats r =
-  Json.resp_ok (Json.Rec
-		  ["connection_count", Json.Num (float_of_int !Connections.connection_count);
-		   "boot_time", Json.Num boot_time;
-		   "uptime", Json.Num (Unix.time () -. boot_time)])
+  Json.resp_ok [] (Json.Rec
+		     ["connection_count", Json.Num (float_of_int !Connections.connection_count);
+		      "boot_time", Json.Num boot_time;
+		      "uptime", Json.Num (Unix.time () -. boot_time)])
+
+let api_tap_source r =
+  let id = Uuid.create () in
+  let id_block_and_padding = Stringstream.const_flush (id ^ ";" ^ String.make 2048 'h' ^ ";") in
+  let rec message_stream () =
+    Thread.delay 0.1;
+    let v = Json.to_string (Json.Rec ["now", Json.Num (Unix.time ());
+				      "id", Json.Str (Uuid.create ())]) in
+    Some (Printf.sprintf "%d;%s;" (String.length v) v, true, Stringstream.make message_stream)
+  in
+  Httpd.resp_generic 200 "Streaming"
+    [Httpd.text_content_type_header;
+     "Access-Control-Allow-Origin", "*"]
+    (Httpd.Variable
+       (Stringstream.switch_after 131072
+	  (Stringstream.seq id_block_and_padding (Stringstream.make message_stream))
+	  Stringstream.empty))
+
+let api_tap_sink r =
+  Httpd.resp_generic 202 "Accepted" [] (Httpd.Fixed "")
+
+let api_tap r =
+  match r.Httpd.verb with
+  | "GET" -> api_tap_source r
+  | "POST" -> api_tap_sink r
+  | _ -> Httpd.http_error_html 400 "Unsupported tap method" []
 
 let register_api_hooks () =
   List.iter register_dispatcher
-    ["/_/server_stats", api_server_stats]
+    ["/_/server_stats", api_server_stats;
+     "/_/tap", api_tap]
 
 let init () =
   register_api_hooks ();

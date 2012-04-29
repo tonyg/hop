@@ -6,6 +6,9 @@ function refresh_server_stats() {
 	$("#server_stats_uptime").text(data.uptime + " seconds");
     }).error(function () {
 	$("#server_ok")[0].className = "server_not_ok";
+	$("#server_stats_connection_count").text("—");
+	$("#server_stats_boot_time").text("—");
+	$("#server_stats_uptime").text("— seconds");
     });
 }
 

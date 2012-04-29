@@ -25,6 +25,8 @@ type t =
 
 exception Syntax_error
 
+let str s = Str s
+
 let escape_char c =
   match c with
   | '\"' -> Some (fun (s, pos) -> ("\\\"", pos + 1))

@@ -26,6 +26,12 @@ function refresh_server_stats() {
     }).error(server_disconnected);
 }
 
+function refresh_all_classes() {
+    $.getJSON("/_/all_classes", function (data) {
+	$("#debug_container").append(JSON.stringify(data));
+    });
+}
+
 var Ocamlmsg = {
     _send: function (msg) {
 	$tap.send({data: JSON.stringify(msg)});
@@ -89,6 +95,7 @@ function reset_tap_stream() {
 
         open: function (event, stream) {
 	    refresh_server_stats();
+	    refresh_all_classes();
 	    Ocamlmsg.post(stream.id, {"test":true});
 	    Ocamlmsg.create("fanout", ["system.log"], "completion1");
 	    Ocamlmsg.subscribe("meta", "system.log", "sub_messages", "completion2");

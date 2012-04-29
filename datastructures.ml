@@ -18,3 +18,5 @@
 module StringSet = Set.Make(String)
 module StringMap = Map.Make(String)
 module UuidSet = StringSet
+
+let string_map_keys m = StringMap.fold (fun k _ acc -> k :: acc) m []

@@ -33,6 +33,9 @@ let register_class name factory =
       else (Log.info "Registered node class" [Str name];
 	    classes := StringMap.add name factory !classes))
 
+let all_class_names () =
+  Datastructures.string_map_keys !classes
+
 let lookup_class name =
   try Some (StringMap.find name !classes)
   with Not_found -> None

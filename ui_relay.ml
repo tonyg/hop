@@ -41,6 +41,9 @@ let rec api_tap_source id r =
   then Httpd.http_error_html 500 "Internal ID collision" []
   else
     let id_block_and_padding = Stringstream.const_flush (id ^ ";" ^ String.make 2048 'h' ^ ";") in
+    handle_message n (Message.subscribe (Sexp.Str (Node.local_container_name()),
+					 Sexp.Str "", Sexp.Str "",
+					 Sexp.Str "", Sexp.Str ""));
     Httpd.add_completion_callback
       (Httpd.resp_generic 200 "Streaming"
 	 [Httpd.text_content_type_header;

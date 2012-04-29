@@ -44,6 +44,20 @@ let rec output_sexp ch x =
       List.iter (output_sexp ch) xs;
       output_char ch ')'
 
+let rec stream_of_sexp x =
+  Stringstream.make (fun () ->
+    match x with
+    | Str s ->
+	Some (string_of_int (String.length s) ^ ":", false, Stringstream.const s)
+    | Hint {hint = h; body = b} ->
+	Some ("[", false,
+	      Stringstream.seq (stream_of_sexp h)
+		(Stringstream.seq (Stringstream.const "]")
+		   (stream_of_sexp b)))
+    | Arr xs ->
+	Some ("(", false,
+	      Stringstream.seq (Stringstream.map stream_of_sexp xs) (Stringstream.const ")")))
+
 let output_char_escaped ch c =
   if c = '\"'
   then output_string ch "\\\""
@@ -79,44 +93,48 @@ let char_whitespace c = c <= ' '
 
 let digit_val c = (int_of_char c) - (int_of_char '0')
 
-let input_bytes count ch =
+let input_bytes ch count =
   let buf = String.create count in (* mutable strings?!?! *)
   really_input ch buf 0 count;
-  Str buf
+  buf
 
 let syntax_error explanation = raise (Syntax_error explanation)
 
-let rec input_simple_string len ch =
-  match input_char ch with
-  | ':' -> input_bytes len ch
-  | b when char_numeric b -> input_simple_string (len * 10 + digit_val b) ch
-  | _ -> syntax_error "Bad simple-string length character"
-
-let rec input_sexp_list ch =
-  let rec collect acc =
-    match input_sexp_inner ch with
-    | None -> Arr (List.rev acc)
-    | Some v -> collect (v :: acc)
-  in collect []
-
-and input_sexp_inner ch =
-  match input_char ch with
-  | '(' -> Some (input_sexp_list ch)
-  | ')' -> None
-  | '[' ->
-      let hint = input_simple_string 0 ch in
-      (match input_char ch with
-      | ']' -> Some (Hint {hint = hint; body = input_simple_string 0 ch})
-      | _ -> syntax_error "Missing close-bracket in display hint")
-  | b when char_numeric b ->
-      Some (input_simple_string (digit_val b) ch)
-  | b when char_whitespace b ->
-      (* Convenience for testing *)
-      input_sexp_inner ch
-  | _ ->
-      syntax_error "Bad SEXP input character"
-
-let input_sexp ch =
-  match input_sexp_inner ch with
+let input_sexp_outer input_char input_bytes =
+  let rec input_simple_string len =
+    match input_char () with
+    | ':' -> Str (input_bytes len)
+    | b when char_numeric b -> input_simple_string (len * 10 + digit_val b)
+    | _ -> syntax_error "Bad simple-string length character"
+  in
+  let rec input_sexp_list () =
+    let rec collect acc =
+      match input_sexp_inner () with
+      | None -> Arr (List.rev acc)
+      | Some v -> collect (v :: acc)
+    in collect []
+  and input_sexp_inner () =
+    match input_char () with
+    | '(' -> Some (input_sexp_list ())
+    | ')' -> None
+    | '[' ->
+	let hint = input_simple_string 0 in
+	(match input_char () with
+	| ']' -> Some (Hint {hint = hint; body = input_simple_string 0})
+	| _ -> syntax_error "Missing close-bracket in display hint")
+    | b when char_numeric b ->
+	Some (input_simple_string (digit_val b))
+    | b when char_whitespace b ->
+	(* Convenience for testing *)
+	input_sexp_inner ()
+    | _ ->
+	syntax_error "Bad SEXP input character"
+  in
+  match input_sexp_inner () with
   | None -> syntax_error "Unexpected end of list"
   | Some v -> v
+
+let input_sexp ch = input_sexp_outer (fun () -> input_char ch) (input_bytes ch)
+let parse b = input_sexp_outer (fun () -> Ibuffer.next_char b) (Ibuffer.next_chars b)
+let sexp_of_string s = parse (Ibuffer.of_string s)
+let string_of_sexp x = Stringstream.to_string (stream_of_sexp x)

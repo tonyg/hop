@@ -25,6 +25,9 @@ let empty = Stream (fun () -> None)
 let const v = Stream (fun () -> Some (v, false, empty))
 let const_flush v = Stream (fun () -> Some (v, true, empty))
 
+let flush_before s = Stream (fun () -> Some ("", true, s))
+let flush = flush_before empty
+
 let rec seq s1 s2 =
   Stream (fun () ->
     match run s1 with

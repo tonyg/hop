@@ -34,7 +34,7 @@ function reset_tap_stream() {
         },
         message: function (event, stream) {
 	    $("#debug_container").text(JSON.stringify(event.data));
-	    stream.send({ok: true});
+	    stream.send({data: JSON.stringify({ok: true})});
         },
         error: server_disconnected,
         close: server_disconnected

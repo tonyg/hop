@@ -170,6 +170,11 @@ let render_fixed_content cout s headers_only =
   output_string cout "\r\n";
   if headers_only then () else output_string cout s
 
+let string_of_content c =
+  match c with
+  | Fixed s -> s
+  | Variable s -> Stringstream.to_string s
+
 let render_content cout v c headers_only =
   match c with
   | Fixed s ->

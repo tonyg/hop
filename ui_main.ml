@@ -77,6 +77,9 @@ let api_tap_source r =
 	  Stringstream.empty))
 
 let api_tap_sink r =
+  List.iter
+    (fun (k, v) -> Printf.printf "%s = %s\n%!" k (match v with Some x -> x | None -> "..."))
+    (Httpd.parse_urlencoded (Httpd.string_of_content r.Httpd.req_body.Httpd.content));
   Httpd.resp_generic 202 "Accepted" [] (Httpd.Fixed "")
 
 let api_tap r =

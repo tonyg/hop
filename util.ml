@@ -50,3 +50,12 @@ let starts_with s1 s2 =
 
 let ends_with s1 s2 =
   try Str.last_chars s1 (String.length s2) = s2 with _ -> false
+
+let strip s =
+  let len = String.length s in
+  let ws i = Char.code (String.get s i) <= 32 in
+  let rec left index = if index < len && ws index then left (index + 1) else index in
+  let rec right index = if index >= 0 && ws index then right (index - 1) else index in
+  let l = left 0 in
+  let r = 1 + right (len - 1) in
+  if r <= l then "" else String.sub s l (r - l)

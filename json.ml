@@ -20,6 +20,8 @@ type t =
   | Str of string
   | Arr of t list
   | Rec of (string * t) list
+  | Flg of bool
+  | Nil
 
 let escape_re = Str.regexp "\""
 let escape_char s =
@@ -43,6 +45,10 @@ let rec to_string j =
       "[" ^ String.concat "," (List.map to_string js) ^ "]"
   | Rec kvs ->
       "{" ^ String.concat "," (List.map kv_to_string kvs) ^ "}"
+  | Flg b ->
+      if b then "true" else "false"
+  | Nil ->
+      "null"
 
 and kv_to_string (k, v) =
   str_to_string k ^ ":" ^ to_string v

@@ -25,7 +25,7 @@ let longest_prefix_first (p1, _) (p2, _) =
 let register_dispatcher (prefix, handler) =
   dispatch_table := List.sort longest_prefix_first ((prefix, handler) :: !dispatch_table)
 
-let handle_dynamic_req r =
+let handle_dynamic_req id r =
   let rec search_table table =
     match table with
     | [] ->
@@ -33,75 +33,38 @@ let handle_dynamic_req r =
 	  [Html.tag "p" [] [Html.text ("No route for URL path "^r.Httpd.path)]]
     | (prefix, handler) :: rest ->
 	if Util.starts_with r.Httpd.path prefix
-	then handler r
+	then handler id r
 	else search_table rest
   in
   search_table !dispatch_table
 
-let handle_req r =
+let handle_req id r =
   if Util.starts_with r.Httpd.path "/_"
-  then handle_dynamic_req r
+  then handle_dynamic_req id r
   else
     match r.Httpd.verb with
     | "GET" | "HEAD" -> Httpd_file.resp_file (Filename.concat "./web" r.Httpd.path)
     | _ -> Httpd.http_error_html 400 ("Unsupported HTTP method "^r.Httpd.verb) []
 
+let cleanup_req id () =
+  match Node.lookup id with
+  | Some n -> Node.unbind_all n
+  | None -> ()
+
 let start (s, peername) =
+  let id = "http-" ^ Uuid.create () in
   Util.create_thread (Connections.endpoint_name peername ^ " HTTP service")
-    None
-    (Httpd.main handle_req)
+    (Some (cleanup_req id))
+    (Httpd.main (handle_req id))
     (s, peername)
 
 let boot_time = Unix.time ()
-let api_server_stats r =
+let api_server_stats id r =
   Json.resp_ok [] (Json.Rec
 		     ["connection_count", Json.Num (float_of_int !Connections.connection_count);
 		      "boot_time", Json.Num boot_time;
 		      "uptime", Json.Num (Unix.time () -. boot_time)])
 
-let api_tap_source r =
-  let id = Uuid.create () in
-  let id_block_and_padding = Stringstream.const_flush (id ^ ";" ^ String.make 2048 'h' ^ ";") in
-  let rec message_stream () =
-    Thread.delay 0.1;
-    let v = Json.to_string (Json.Rec ["now", Json.Num (Unix.time ());
-				      "id", Json.Str (Uuid.create ())]) in
-    Some (Printf.sprintf "%d;%s;" (String.length v) v, true, Stringstream.make message_stream)
-  in
-  Httpd.resp_generic 200 "Streaming"
-    [Httpd.text_content_type_header;
-     "Access-Control-Allow-Origin", "*"]
-    (Httpd.Variable
-       (Stringstream.switch_after 131072
-	  (Stringstream.seq id_block_and_padding (Stringstream.make message_stream))
-	  Stringstream.empty))
-
-let counter = ref 0
-let api_tap_sink r =
-  let params = Httpd.parse_urlencoded (Httpd.string_of_content r.Httpd.req_body.Httpd.content) in
-  (* let stream_id = List.assoc "metadata.id" params in *)
-  match List.assoc "metadata.type" params with
-  | Some "send" ->
-      (match List.assoc "data" params with
-      | Some data_str ->
-	  let data = Json.of_string data_str in
-	  counter := 1 + !counter;
-	  Printf.printf "Data: %d %s\n%!" !counter (Json.to_string data);
-	  Httpd.resp_generic 202 "Accepted" [] (Httpd.empty_content)
-      | _ -> Httpd.http_error_html 406 "Bad data parameter" [])
-  | _ -> Httpd.http_error_html 406 "Unsupported metadata.type" []
-
-let api_tap r =
-  match r.Httpd.verb with
-  | "GET" -> api_tap_source r
-  | "POST" -> api_tap_sink r
-  | _ -> Httpd.http_error_html 400 "Unsupported tap method" []
-
-let register_api_hooks () =
-  List.iter register_dispatcher
-    ["/_/server_stats", api_server_stats;
-     "/_/tap", api_tap]
-
 let init () =
-  register_api_hooks ();
+  register_dispatcher ("/_/server_stats", api_server_stats);
   ignore (Util.create_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)

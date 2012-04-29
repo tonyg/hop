@@ -36,5 +36,6 @@ let _ =
   hook_log ();
   Amqp_relay.init ();
   Ui_main.init ();
+  Ui_relay.init ();
   (* Speedtest.init (); *)
   Net.start_net "Hop" 5671 Relay.start

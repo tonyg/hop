@@ -20,6 +20,7 @@ open Unix
 type version = [`HTTP_1_0 | `HTTP_1_1]
 type resp_version = [version | `SAME_AS_REQUEST]
 type content = Fixed of string | Variable of Stringstream.t
+type completion = Completion_normal | Completion_error
 
 type body = {
     headers: (string * string) list;
@@ -41,7 +42,8 @@ type resp = {
     resp_version: resp_version;
     status: int;
     reason: string;
-    resp_body: body
+    resp_body: body;
+    completion_callbacks: (completion -> unit) list
   }
 
 exception HTTPError of (int * string * body)
@@ -53,6 +55,9 @@ let content_type_header_name = "Content-Type"
 
 let html_content_type_header = (content_type_header_name, html_content_type)
 let text_content_type_header = (content_type_header_name, text_content_type)
+
+let add_completion_callback resp cb =
+  {resp with completion_callbacks = cb :: resp.completion_callbacks}
 
 let http_error code reason body = raise (HTTPError (code, reason, body))
 
@@ -77,7 +82,8 @@ let resp_generic code reason headers content =
   { resp_version = `SAME_AS_REQUEST;
     status = code;
     reason = reason;
-    resp_body = {headers = headers; content = content} }
+    resp_body = {headers = headers; content = content};
+    completion_callbacks = [] }
 
 let resp_generic_ok headers content =
   resp_generic 200 "OK" headers content
@@ -142,13 +148,13 @@ let render_header cout (k, v) =
   output_string cout "\r\n"
 
 let render_chunk cout (chunk, should_flush) =
-  match chunk with
+  (match chunk with
   | "" -> ()
   | _ ->
       output_string cout (Printf.sprintf "%x\r\n" (String.length chunk));
       output_string cout chunk;
-      output_string cout "\r\n";
-      if should_flush then flush cout else ()
+      output_string cout "\r\n");
+  if should_flush then flush cout else ()
 
 let render_fixed_content cout s headers_only =
   render_header cout ("Content-Length", string_of_int (String.length s));
@@ -221,7 +227,7 @@ let parse_urlencoded q =
   let pieces = Str.split (Str.regexp "&") q in
   List.map parse_urlencoded_binding pieces
 
-let find_header name hs =
+let find_header' name hs =
   let lc_name = String.lowercase name in
   let rec search hs =
     match hs with
@@ -233,8 +239,11 @@ let find_header name hs =
   in
   search hs
 
-let find_header' name hs =
-  try Some (find_header name hs) with Not_found -> None
+let find_header name hs =
+  try Some (find_header' name hs) with Not_found -> None
+
+let find_param name params =
+  try Some (List.assoc name params) with Not_found -> None
 
 let input_crlf cin =
   let line = input_line cin in
@@ -263,9 +272,9 @@ let parse_chunks cin =
 
 let parse_body cin =
   let headers = parse_headers cin in
-  match find_header' "Transfer-Encoding" headers with
+  match find_header "Transfer-Encoding" headers with
   | None | Some "identity" ->
-      (match find_header' "Content-Length" headers with
+      (match find_header "Content-Length" headers with
       | None ->
 	  (* http_error_html 411 "Length required" [] *)
 	  {headers = headers; content = empty_content}
@@ -301,7 +310,7 @@ let discard_unread_body req =
   | Variable s -> Stringstream.iter (fun v -> ()) s (* force chunks to be read *)
 
 let connection_keepalive req =
-  find_header' "Connection" req.req_body.headers = Some "keep-alive"
+  find_header "Connection" req.req_body.headers = Some "keep-alive"
 
 let main handle_req (s, peername) =
   let cin = in_channel_of_descr s in
@@ -310,16 +319,61 @@ let main handle_req (s, peername) =
     (try
       let rec request_loop () =
 	let req = parse_req cin 512 in
-	render_resp cout req.req_version req.verb (handle_req req);
-	discard_unread_body req;
-	flush cout;
+	let resp = handle_req req in
+
+	let completion_mutex = Mutex.create () in
+	let completion = ref None in
+	let set_completion v =
+	  Util.with_mutex0 completion_mutex (fun () ->
+	    match !completion with
+	    | None ->
+		completion := Some v;
+		List.iter (fun cb -> cb v) resp.completion_callbacks
+	    | Some _ -> ())
+	in
+
+	(* Here we spawn a thread that just watches the socket to see
+	if it either becomes active or closes during rendering of the
+	response, so that we can make decisions based on this in any
+	eventual streaming response generators. In particular, if
+	we're implementing some kind of XHR streaming andthe client
+	goes away, we want to abandon the streaming as soon as
+	possible. *)
+	let input_waiter () =
+	  try
+	    (let (r, w, e) = Unix.select [s] [] [s] (-1.0) in
+	    set_completion (if r <> [] then Completion_normal else Completion_error))
+	  with _ -> set_completion Completion_error
+	in
+	ignore (Thread.create input_waiter ());
+
+	(try
+	  render_resp cout req.req_version req.verb resp;
+	  discard_unread_body req;
+	  flush cout;
+	  set_completion Completion_normal
+	with e ->
+	  set_completion Completion_error;
+	  raise e);
+
 	if connection_keepalive req then request_loop () else ()
       in
       request_loop ()
-    with HTTPError (code, reason, body) ->
-      render_resp cout `HTTP_1_0
-	"GET" (* ugh this should probably be done better *)
-	{ resp_version = `HTTP_1_0; status = code; reason = reason; resp_body = body })
-  with _ -> ());
+    with
+    | End_of_file ->
+	()
+    | HTTPError (code, reason, body) ->
+	render_resp cout `HTTP_1_0
+	  "GET" (* ugh this should probably be done better *)
+	  { resp_version = `HTTP_1_0;
+	    status = code;
+	    reason = reason;
+	    resp_body = body;
+	    completion_callbacks = [] })
+  with
+  | Sys_error message ->
+      Log.info "Sys_error in httpd handler" [Sexp.Str message]
+  | exn ->
+      Log.error "Uncaught exception in httpd handler" [Sexp.Str (Printexc.to_string exn)]);
   (try flush cout with _ -> ());
   close s

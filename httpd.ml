@@ -109,20 +109,19 @@ let resp_redirect_permanent new_path =
 	Html.tag "a" ["href", new_path] [Html.text "here"];
 	Html.text "."])
 
-let url_escape_re = Str.regexp "[% ]"
-let escape_url_char s =
-  match s with
-  | "%" -> "%25"
-  | " " -> "%20"
-  | _ -> failwith ("Unexpected URL char to escape: " ^ s)
-let url_escape s = Str.global_substitute url_escape_re escape_url_char s
+let escape_url_char c =
+  match c with
+  | '%' -> Some (fun (s, pos) -> ("%25", pos + 1))
+  | ' ' -> Some (fun (s, pos) -> ("%20", pos + 1))
+  | _ -> None
+let url_escape s = Util.strsub escape_url_char s
 
 let unhex_char c =
   match c with
   | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> Char.code c - Char.code '0'
-  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' -> Char.code c - Char.code 'a'
-  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' -> Char.code c - Char.code 'A'
-  | _ -> 0
+  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' -> Char.code c - Char.code 'a' + 10
+  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' -> Char.code c - Char.code 'A' + 10
+  | _ -> -1
 
 let unhex s =
   let len = String.length s in
@@ -133,10 +132,23 @@ let unhex s =
   in
   loop 0 0
 
-let url_unescape_re = Str.regexp "%[0-9a-zA-Z][0-9a-zA-Z]"
-let unescape_url_char s =
-  String.make 1 (Char.chr (unhex_char (String.get s 1) * 16 + unhex_char (String.get s 2)))
-let url_unescape s = Str.global_substitute url_unescape_re unescape_url_char s
+let unescape_url_hex_code (s, pos) =
+  let len = String.length s in
+  if len - pos >= 3
+  then
+    let v1 = unhex_char (String.get s (pos + 1)) in
+    let v2 = unhex_char (String.get s (pos + 2)) in
+    if v1 = -1 || v2 = -1
+    then http_error_html 400 ("Bad percent escaping: '"^String.sub s pos 3^"'") []
+    else (String.make 1 (Char.chr (v1 * 16 + v2)), pos + 3)
+  else http_error_html 400 ("Bad percent escaping: '"^String.sub s pos (len - pos)^"'") []
+
+let unescape_url_char c =
+  match c with
+  | '%' -> Some unescape_url_hex_code
+  | _ -> None
+
+let url_unescape s = Util.strsub unescape_url_char s
 
 let render_header cout (k, v) =
   output_string cout k;

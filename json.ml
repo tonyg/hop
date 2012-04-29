@@ -23,12 +23,11 @@ type t =
   | Flg of bool
   | Nil
 
-let escape_re = Str.regexp "\""
-let escape_char s =
-  match s with
-  | "\"" -> "\\\""
-  | _ -> failwith ("Unexpected JSON char to escape: " ^ s)
-let escape s = Str.global_substitute escape_re escape_char s
+let escape_char c =
+  match c with
+  | '\"' -> Some (fun (s, pos) -> ("\\\"", pos + 1))
+  | _ -> None
+let escape s = Util.strsub escape_char s
 
 let str_to_string s =
   "\"" ^ escape s ^ "\""

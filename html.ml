@@ -40,23 +40,20 @@ let tag_of_document doc =
 	@ doc.html_headers);
      tag "body" [] doc.html_body]
 
-let html_escape_re = Str.regexp "[&<>]"
-let escape_html_char s =
-  match s with
-  | "&" -> "&amp;"
-  | "<" -> "&lt;"
-  | ">" -> "&gt;"
-  | _ -> failwith ("Unexpected HTML char to escape: " ^ s)
-let html_escape s = Str.global_substitute html_escape_re escape_html_char s
+let escape_html_char c =
+  match c with
+  | '&' -> Some (fun (s, pos) -> ("&amp;", pos + 1))
+  | '<' -> Some (fun (s, pos) -> ("&lt;", pos + 1))
+  | '>' -> Some (fun (s, pos) -> ("&gt;", pos + 1))
+  | _ -> None
+let html_escape s = Util.strsub escape_html_char s
 
-let html_attribute_escape_re = Str.regexp "['\"]"
-let escape_html_attribute_char s =
-  match s with
-  | "'" -> "&apos;"
-  | "\"" -> "&quot;"
-  | _ -> failwith ("Unexpected HTML attribute char to escape: " ^ s)
-let html_attribute_escape s =
-  Str.global_substitute html_attribute_escape_re escape_html_attribute_char s
+let escape_html_attribute_char c =
+  match c with
+  | '\'' -> Some (fun (s, pos) -> ("&apos;", pos + 1))
+  | '\"' -> Some (fun (s, pos) -> ("&quot;", pos + 1))
+  | _ -> None
+let html_attribute_escape s = Util.strsub escape_html_attribute_char s
 
 let string_of_html_attribute (k, v) =
   k ^ "=\"" ^ html_attribute_escape v ^ "\""

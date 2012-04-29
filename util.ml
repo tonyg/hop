@@ -59,3 +59,21 @@ let strip s =
   let l = left 0 in
   let r = 1 + right (len - 1) in
   if r <= l then "" else String.sub s l (r - l)
+
+let strsub replacement_fn s =
+  let len = String.length s in
+  let finish_span low high acc = String.sub s low (high - low) :: acc in
+  let finish acc = String.concat "" (List.rev acc) in
+  let rec outer_loop acc low =
+    let rec inner_loop high =
+      if high = len
+      then finish (finish_span low high acc)
+      else
+	match replacement_fn (String.get s high) with
+	| Some handler ->
+	    let (replacement, new_low) = handler (s, high) in
+	    outer_loop (replacement :: finish_span low high acc) new_low
+	| None ->
+	    inner_loop (high + 1)
+    in inner_loop low
+  in outer_loop [] 0

@@ -56,7 +56,7 @@ let read_and_close_file handle =
       with e -> (close_in handle; raise e))
     in
     if count > 0
-    then Some (String.sub buffer 0 count)
+    then Some (String.sub buffer 0 count, false)
     else (close_in handle;
 	  None)
 

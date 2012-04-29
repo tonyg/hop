@@ -86,13 +86,13 @@ and stream_of_html c =
   Stringstream.make (fun () ->
     match c with
     | Tag (label, attrs, [], true) ->
-	Some (html_open_tag_string label attrs, Stringstream.empty)
+	Some (html_open_tag_string label attrs, false, Stringstream.empty)
     | Tag (label, attrs, contents, _) ->
-	Some (html_open_tag_string label attrs,
+	Some (html_open_tag_string label attrs, false,
 	      Stringstream.seq
 		(stream_of_html_contents contents) (Stringstream.const ("</"^label^">")))
     | Text str ->
-	Some (str, Stringstream.empty))
+	Some (str, false, Stringstream.empty))
 
 let stream_of_html_doc d =
   Stringstream.seq (Stringstream.const "<!DOCTYPE html>") (stream_of_html (tag_of_document d))

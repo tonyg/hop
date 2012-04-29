@@ -144,13 +144,14 @@ let render_header cout (k, v) =
   output_string cout v;
   output_string cout "\r\n"
 
-let render_chunk cout chunk =
+let render_chunk cout (chunk, should_flush) =
   match chunk with
   | "" -> ()
   | _ ->
       output_string cout (Printf.sprintf "%x\r\n" (String.length chunk));
       output_string cout chunk;
-      output_string cout "\r\n"
+      output_string cout "\r\n";
+      if should_flush then flush cout else ()
 
 let render_fixed_content cout s headers_only =
   render_header cout ("Content-Length", string_of_int (String.length s));
@@ -246,7 +247,7 @@ let parse_chunks cin =
     let buffer = String.make chunk_len '\000' in
     really_input cin buffer 0 chunk_len;
     (if input_crlf cin <> "" then http_error_html 400 "Invalid chunk boundary" [] else ());
-    if chunk_len = 0 then None else Some buffer
+    if chunk_len = 0 then None else Some (buffer, false)
 
 let parse_body cin =
   let headers = parse_headers cin in

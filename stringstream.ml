@@ -57,13 +57,13 @@ let rec from_iter f =
 	cache := Some result;
 	result)
 
-let rec iter f (Stream s_f) =
-  match s_f () with
+let rec iter f s =
+  match run s with
   | None -> ()
   | Some (v, flush, k) -> (f (v, flush); iter f k)
 
-let rec to_list (Stream f) =
-  match f () with
+let rec to_list s =
+  match run s with
   | None -> []
   | Some (v, _, k) -> v :: to_list k
 

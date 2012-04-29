@@ -152,28 +152,30 @@ let render_chunk cout chunk =
       output_string cout chunk;
       output_string cout "\r\n"
 
-let render_fixed_content cout s =
+let render_fixed_content cout s headers_only =
   render_header cout ("Content-Length", string_of_int (String.length s));
   output_string cout "\r\n";
-  output_string cout s
+  if headers_only then () else output_string cout s
 
-let render_content cout v c =
+let render_content cout v c headers_only =
   match c with
   | Fixed s ->
-      render_fixed_content cout s
+      render_fixed_content cout s headers_only
   | Variable s ->
       match v with
       | `HTTP_1_0 ->
-	  render_fixed_content cout (Stringstream.to_string s)
+	  render_fixed_content cout (Stringstream.to_string s) headers_only
       | `HTTP_1_1 ->
-	  render_header cout ("Transfer-Encoding", "chunked");
-	  output_string cout "\r\n";
-	  Stringstream.iter (render_chunk cout) s;
-	  output_string cout "0\r\n\r\n"
+	  if headers_only
+	  then (output_string cout "\r\n")
+	  else (render_header cout ("Transfer-Encoding", "chunked");
+		output_string cout "\r\n";
+		Stringstream.iter (render_chunk cout) s;
+		output_string cout "0\r\n\r\n")
 
-let render_body cout v b =
+let render_body cout v b headers_only =
   List.iter (render_header cout) b.headers;
-  render_content cout v b.content
+  render_content cout v b.content headers_only
 
 let string_of_version v =
   match v with
@@ -188,9 +190,9 @@ let version_of_string v =
 
 let render_req cout r =
   output_string cout (r.verb^" "^url_escape r.path^" "^string_of_version r.req_version^"\r\n");
-  render_body cout r.req_version r.req_body
+  render_body cout r.req_version r.req_body false
 
-let render_resp cout req_version r =
+let render_resp cout req_version req_verb r =
   let resp_version =
     (match r.resp_version with
     | `SAME_AS_REQUEST -> req_version
@@ -198,7 +200,7 @@ let render_resp cout req_version r =
   in
   output_string cout
     (string_of_version resp_version^" "^string_of_int r.status^" "^r.reason^"\r\n");
-  render_body cout resp_version r.resp_body
+  render_body cout resp_version r.resp_body (match req_verb with "HEAD" -> true | _ -> false)
 
 let split_query p =
   match Str.bounded_split (Str.regexp "\\?") p 2 with
@@ -294,7 +296,7 @@ let main handle_req (s, peername) =
     (try
       let rec request_loop () =
 	let req = parse_req cin 512 in
-	render_resp cout req.req_version (handle_req req);
+	render_resp cout req.req_version req.verb (handle_req req);
 	discard_unread_body req;
 	flush cout;
 	if connection_keepalive req then request_loop () else ()
@@ -302,6 +304,7 @@ let main handle_req (s, peername) =
       request_loop ()
     with HTTPError (code, reason, body) ->
       render_resp cout `HTTP_1_0
+	"GET" (* ugh this should probably be done better *)
 	{ resp_version = `HTTP_1_0; status = code; reason = reason; resp_body = body })
   with _ -> ());
   (try flush cout with _ -> ());

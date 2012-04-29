@@ -40,7 +40,7 @@ let handle_req r =
   then handle_dynamic_req r
   else
     match r.Httpd.verb with
-    | "GET" -> Httpd_file.resp_file (Filename.concat "./web" r.Httpd.path)
+    | "GET" | "HEAD" -> Httpd_file.resp_file (Filename.concat "./web" r.Httpd.path)
     | _ -> Httpd.http_error_html 400 ("Unsupported HTTP method "^r.Httpd.verb) []
 
 let start (s, peername) =

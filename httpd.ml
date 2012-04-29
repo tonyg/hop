@@ -31,7 +31,7 @@ let empty_body = {headers = []; content = Fixed ""}
 type req = {
     verb: string;
     path: string;
-    query: string;
+    query: (string * string option) list;
     req_version: version;
     req_body: body
   }
@@ -221,6 +221,16 @@ let split_query p =
   | path :: [] -> (path, "")
   | [] -> ("", "")
 
+let parse_urlencoded_binding s =
+  match Str.bounded_split (Str.regexp "=") s 2 with
+  | k :: v :: _ -> (url_unescape k, Some (url_unescape v))
+  | k :: [] -> (url_unescape k, None)
+  | [] -> ("", None)
+
+let parse_urlencoded q =
+  let pieces = Str.split (Str.regexp "&") q in
+  List.map parse_urlencoded_binding pieces
+
 let find_header name hs =
   let lc_name = String.lowercase name in
   let rec search hs =
@@ -289,8 +299,9 @@ let rec parse_req cin spurious_newline_credit =
   | [verb; path; version_str] ->
       let version = version_of_string version_str in
       let body = parse_body cin in
-      let path = url_unescape path in
       let (path, query) = split_query path in
+      let path = url_unescape path in
+      let query = parse_urlencoded query in
       { verb = verb; path = path; query = query; req_version = version; req_body = body }
   | _ -> http_error_html 400 "Bad request line" []
 

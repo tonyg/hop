@@ -26,7 +26,8 @@ type body = {
     content: content
   }
 
-let empty_body = {headers = []; content = Fixed ""}
+let empty_content = Fixed ""
+let empty_body = {headers = []; content = empty_content}
 
 type req = {
     verb: string;
@@ -116,28 +117,12 @@ let escape_url_char c =
   | _ -> None
 let url_escape s = Util.strsub escape_url_char s
 
-let unhex_char c =
-  match c with
-  | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> Char.code c - Char.code '0'
-  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' -> Char.code c - Char.code 'a' + 10
-  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' -> Char.code c - Char.code 'A' + 10
-  | _ -> -1
-
-let unhex s =
-  let len = String.length s in
-  let rec loop index acc =
-    if index = len
-    then acc
-    else loop (index + 1) (acc * 16 + unhex_char (String.get s index))
-  in
-  loop 0 0
-
 let unescape_url_hex_code (s, pos) =
   let len = String.length s in
   if len - pos >= 3
   then
-    let v1 = unhex_char (String.get s (pos + 1)) in
-    let v2 = unhex_char (String.get s (pos + 2)) in
+    let v1 = Util.unhex_char (String.get s (pos + 1)) in
+    let v2 = Util.unhex_char (String.get s (pos + 2)) in
     if v1 = -1 || v2 = -1
     then http_error_html 400 ("Bad percent escaping: '"^String.sub s pos 3^"'") []
     else (String.make 1 (Char.chr (v1 * 16 + v2)), pos + 3)
@@ -270,7 +255,7 @@ let rec parse_headers cin =
 let parse_chunks cin =
   fun () ->
     let hexlen_str = input_crlf cin in
-    let chunk_len = unhex hexlen_str in
+    let chunk_len = Util.unhex hexlen_str in
     let buffer = String.make chunk_len '\000' in
     really_input cin buffer 0 chunk_len;
     (if input_crlf cin <> "" then http_error_html 400 "Invalid chunk boundary" [] else ());
@@ -283,7 +268,7 @@ let parse_body cin =
       (match find_header' "Content-Length" headers with
       | None ->
 	  (* http_error_html 411 "Length required" [] *)
-	  {headers = headers; content = Fixed ""}
+	  {headers = headers; content = empty_content}
       | Some length_str ->
 	  let length = int_of_string length_str in
 	  let buffer = String.make length '\000' in

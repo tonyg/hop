@@ -40,6 +40,23 @@ let sub b ofs len =
 
 let remaining b = b.limit - b.pos
 
+let skip_byte b =
+  if b.pos < b.limit
+  then b.pos <- b.pos + 1
+  else raise End_of_file
+
+let skip_ws b =
+  while b.pos < b.limit && String.get b.buf b.pos <= ' ' do
+    b.pos <- b.pos + 1
+  done
+
+let peek_char b =
+  if b.pos < b.limit
+  then String.get b.buf b.pos
+  else raise End_of_file
+
+let peek_byte b = int_of_char (peek_char b)
+
 let next_char b =
   if b.pos < b.limit
   then

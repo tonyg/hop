@@ -77,3 +77,19 @@ let strsub replacement_fn s =
 	    inner_loop (high + 1)
     in inner_loop low
   in outer_loop [] 0
+
+let unhex_char c =
+  match c with
+  | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' -> Char.code c - Char.code '0'
+  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' -> Char.code c - Char.code 'a' + 10
+  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' -> Char.code c - Char.code 'A' + 10
+  | _ -> -1
+
+let unhex s =
+  let len = String.length s in
+  let rec loop index acc =
+    if index = len
+    then acc
+    else loop (index + 1) (acc * 16 + unhex_char (String.get s index))
+  in
+  loop 0 0

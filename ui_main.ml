@@ -76,11 +76,20 @@ let api_tap_source r =
 	  (Stringstream.seq id_block_and_padding (Stringstream.make message_stream))
 	  Stringstream.empty))
 
+let counter = ref 0
 let api_tap_sink r =
-  List.iter
-    (fun (k, v) -> Printf.printf "%s = %s\n%!" k (match v with Some x -> x | None -> "..."))
-    (Httpd.parse_urlencoded (Httpd.string_of_content r.Httpd.req_body.Httpd.content));
-  Httpd.resp_generic 202 "Accepted" [] (Httpd.Fixed "")
+  let params = Httpd.parse_urlencoded (Httpd.string_of_content r.Httpd.req_body.Httpd.content) in
+  (* let stream_id = List.assoc "metadata.id" params in *)
+  match List.assoc "metadata.type" params with
+  | Some "send" ->
+      (match List.assoc "data" params with
+      | Some data_str ->
+	  let data = Json.of_string data_str in
+	  counter := 1 + !counter;
+	  Printf.printf "Data: %d %s\n%!" !counter (Json.to_string data);
+	  Httpd.resp_generic 202 "Accepted" [] (Httpd.empty_content)
+      | _ -> Httpd.http_error_html 406 "Bad data parameter" [])
+  | _ -> Httpd.http_error_html 406 "Unsupported metadata.type" []
 
 let api_tap r =
   match r.Httpd.verb with

@@ -19,8 +19,11 @@ open Html
 
 let dispatch_table = ref []
 
+let longest_prefix_first (p1, _) (p2, _) =
+  String.length p2 - String.length p1
+
 let register_dispatcher (prefix, handler) =
-  dispatch_table := (prefix, handler) :: !dispatch_table
+  dispatch_table := List.sort longest_prefix_first ((prefix, handler) :: !dispatch_table)
 
 let handle_dynamic_req r =
   let rec search_table table =

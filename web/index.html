@@ -1,52 +1,79 @@
+<!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8">
     <title>Ocamlmsg</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.css">
+    <style>
+      body {
+        padding-top: 60px; /* to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
     <link rel="stylesheet" type="text/css" href="ui.css">
     <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
     <script type="text/javascript" src="jquery.stream-1.2.js"></script>
     <script type="text/javascript" src="ui_main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
   </head>
   <body>
-    <div id="page">
-      <div id="header">
-	<div class="mainmenu">
-	  <ul>
-	    <li><a href="/">Main page</a></li>
-	  </ul>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+	<div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+	  <a class="brand" href="/">Ocamlmsg</a>
+	  <div class="nav-collapse">
+	    <ul class="nav">
+	      <li class="btn-danger"><a href="alpha.html">Alpha</a></li>
+	      <li class="active"><a href="/">Main page</a></li>
+	    </ul>
+	  </div>
 	</div>
-	<div class="clear"></div>
-      </div>
-      <div class="content">
-	<h1>Ocamlmsg</h1>
-
-	<table>
-	  <tr>
-	    <th>Server Status</th>
-	    <td id="server_ok">&nbsp;</td>
-	  </tr>
-	</table>
-
-	<h2>Server statistics</h2>
-	<table>
-	  <tr>
-	    <th>Connection count</th>
-	    <td id="server_stats_connection_count"></td>
-	  </tr>
-	  <tr>
-	    <th>Boot time</th>
-	    <td id="server_stats_boot_time"></td>
-	  </tr>
-	  <tr>
-	    <th>Uptime</th>
-	    <td id="server_stats_uptime"></td>
-	  </tr>
-	</table>
-
-	<h2>Debug</h2>
-	<pre id="debug_container"></pre>
       </div>
     </div>
+
+    <div class="container">
+      <h2>Server statistics</h2>
+      <table class="table">
+	<tr>
+	  <th class="span6">Server Status</th>
+	  <td class="span6" id="server_ok">OK</td>
+	</tr>
+	<tr>
+	  <th class="span6">Connection count</th>
+	  <td class="span6" id="server_stats_connection_count"></td>
+	</tr>
+	<tr>
+	  <th class="span6">Boot time</th>
+	  <td class="span6" id="server_stats_boot_time"></td>
+	</tr>
+	<tr>
+	  <th class="span6">Uptime</th>
+	  <td class="span6" id="server_stats_uptime"></td>
+	</tr>
+      </table>
+
+      <h2>Debug</h2>
+      <pre id="debug_container"></pre>
+    </div>
+
     <script>$(document).ready(ui_main);</script>
+    <script src="bootstrap/js/bootstrap-transition.js"></script>
+    <script src="bootstrap/js/bootstrap-alert.js"></script>
+    <script src="bootstrap/js/bootstrap-modal.js"></script>
+    <script src="bootstrap/js/bootstrap-dropdown.js"></script>
+    <script src="bootstrap/js/bootstrap-scrollspy.js"></script>
+    <script src="bootstrap/js/bootstrap-tab.js"></script>
+    <script src="bootstrap/js/bootstrap-tooltip.js"></script>
+    <script src="bootstrap/js/bootstrap-popover.js"></script>
+    <script src="bootstrap/js/bootstrap-button.js"></script>
+    <script src="bootstrap/js/bootstrap-collapse.js"></script>
+    <script src="bootstrap/js/bootstrap-carousel.js"></script>
+    <script src="bootstrap/js/bootstrap-typeahead.js"></script>
   </body>
 </html>

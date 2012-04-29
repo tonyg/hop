@@ -69,3 +69,13 @@ let rec to_list s =
 
 let rec to_string s =
   String.concat "" (to_list s)
+
+let rec switch_after' on_boundary limit s1 s2 =
+  if limit > 0 || not on_boundary
+  then Stream (fun () ->
+    match run s1 with
+    | None -> None
+    | Some (v, f, k) -> Some (v, f, switch_after' f (limit - String.length v) k s2))
+  else s2
+
+let switch_after limit s1 s2 = switch_after' true limit s1 s2

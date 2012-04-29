@@ -1,0 +1,30 @@
+<page>
+  <title>Ocamlmsg</title>
+  <section>main</section>
+  <body>
+    <h2>Server statistics</h2>
+    <table class="table">
+      <tr>
+	<th class="span6">Server Status</th>
+	<td class="span6" id="server_ok">OK</td>
+      </tr>
+      <tr>
+	<th class="span6">Connection count</th>
+	<td class="span6" id="server_stats_connection_count"></td>
+      </tr>
+      <tr>
+	<th class="span6">Boot time</th>
+	<td class="span6" id="server_stats_boot_time"></td>
+      </tr>
+      <tr>
+	<th class="span6">Uptime</th>
+	<td class="span6" id="server_stats_uptime"></td>
+      </tr>
+    </table>
+
+    <h2>Debug</h2>
+    <pre id="debug_container"></pre>
+  </body>
+
+  <script>$(document).ready(ui_main);</script>
+</page>

@@ -5,7 +5,8 @@ function server_disconnected() {
     $("#server_ok").text("Disconnected");
     $("#server_stats_connection_count").text("—");
     $("#server_stats_boot_time").text("—");
-    $("#server_stats_uptime").text("— seconds");
+    $("#server_stats_uptime").text("—");
+    $("#server_classes").text("—");
 }
 
 function refresh_server_stats() {
@@ -14,7 +15,8 @@ function refresh_server_stats() {
 	$("#server_ok").text("OK");
 	$("#server_stats_connection_count").text(data.connection_count);
 	$("#server_stats_boot_time").text(new Date(data.boot_time * 1000));
-	$("#server_stats_uptime").text(data.uptime + " seconds");
+	$("#server_stats_uptime").text(data.uptime);
+	$("#server_classes").text(data.classes.join(", "));
 	switch ($tap.readyState) {
 	case 0: // connecting
 	case 1: // open

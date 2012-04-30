@@ -14,11 +14,14 @@
       </tr>
       <tr>
 	<th class="span6">Boot time</th>
-	<td class="span6" id="server_stats_boot_time"></td>
+	<td class="span6">
+	  <span	id="server_stats_boot_time"/>;
+	  up <span id="server_stats_uptime"/> seconds
+	</td>
       </tr>
       <tr>
-	<th class="span6">Uptime</th>
-	<td class="span6" id="server_stats_uptime"></td>
+	<th class="span6">Available node classes</th>
+	<td class="span6" id="server_classes"></td>
       </tr>
     </table>
 

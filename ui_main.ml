@@ -63,12 +63,9 @@ let api_server_stats id r =
   Json.resp_ok [] (Json.Rec
 		     ["connection_count", Json.Num (float_of_int !Connections.connection_count);
 		      "boot_time", Json.Num boot_time;
-		      "uptime", Json.Num (Unix.time () -. boot_time)])
-
-let api_all_classes id r =
-  Json.resp_ok [] (Json.Arr (List.map Json.str (Factory.all_class_names ())))
+		      "uptime", Json.Num (Unix.time () -. boot_time);
+		      "classes", Json.Arr (List.map Json.str (Factory.all_class_names ()))])
 
 let init () =
   register_dispatcher ("/_/server_stats", api_server_stats);
-  register_dispatcher ("/_/all_classes", api_all_classes);
   ignore (Util.create_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)

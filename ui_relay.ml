@@ -46,8 +46,10 @@ let rec api_tap_source id r =
 					 Sexp.Str "", Sexp.Str ""));
     Httpd.add_completion_callback
       (Httpd.resp_generic 200 "Streaming"
-	 [Httpd.text_content_type_header;
-	  "Access-Control-Allow-Origin", "*"]
+	 ([Httpd.text_content_type_header;
+	   "Access-Control-Allow-Origin", "*";
+	   "Date", Httpd_date.http_gmtime (Unix.time ())]
+	  @ Httpd.disable_cache_headers ())
 	 (Httpd.Variable
 	    (Stringstream.switch_after 131072
 	       (Stringstream.seq id_block_and_padding (Stringstream.make (message_stream ch)))

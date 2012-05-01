@@ -56,6 +56,12 @@ let content_type_header_name = "Content-Type"
 let html_content_type_header = (content_type_header_name, html_content_type)
 let text_content_type_header = (content_type_header_name, text_content_type)
 
+let disable_cache_headers () =
+  ["Expires", "Thu, 01 Jan 1981 00:00:00 GMT";
+   "Last-Modified", Httpd_date.http_gmtime (Unix.time ());
+   "Cache-Control", "no-cache, must-revalidate, max-age=0";
+   "Pragma", "no-cache"]
+
 let add_completion_callback resp cb =
   {resp with completion_callbacks = cb :: resp.completion_callbacks}
 

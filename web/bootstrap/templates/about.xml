@@ -1,10 +1,10 @@
 <page>
-  <title>About Ocamlmsg</title>
+  <title>About Hop</title>
   <body>
 
-    <h1>About Ocamlmsg</h1>
+    <h1>About Hop</h1>
     <p>
-      Ocamlmsg is a prototype of a sensible recursive message broker.
+      Hop is a prototype of a sensible recursive message broker.
     </p>
 
     <h2>Homepage</h2>
@@ -17,7 +17,7 @@
 
     <h2>Copyright &amp; Licence</h2>
     <p>
-      Ocamlmsg is Copyright (C) 2012 Tony Garnock-Jones.
+      Hop is Copyright (C) 2012 Tony Garnock-Jones.
     </p>
     <p>
       This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@
     </p>
     <p>
       <span class="label label-warning">Warning</span>
-      Ocamlmsg is <em>alpha</em> software!
+      Hop is <em>alpha</em> software!
     </p>
 
   </body>

@@ -9,6 +9,6 @@
 	$("#server_status_message").text("Connected");
     }
 
-    Ocamlmsg.$open_hooks.push(server_connected);
-    Ocamlmsg.$close_hooks.push(server_disconnected);
+    Hop.$open_hooks.push(server_connected);
+    Hop.$close_hooks.push(server_disconnected);
 })();

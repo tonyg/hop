@@ -20,7 +20,7 @@
       <link rel="stylesheet" type="text/css" href="ui.css" />
       <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
       <script type="text/javascript" src="jquery.stream-1.2.js"></script>
-      <script type="text/javascript" src="ocamlmsg.js"></script>
+      <script type="text/javascript" src="hop.js"></script>
       <script type="text/javascript" src="global.js"></script>
       <xsl:for-each select="load">
 	<script type="text/javascript" src="{text()}"></script>
@@ -39,7 +39,7 @@
 	      <span class="icon-bar"></span>
 	      <span class="icon-bar"></span>
 	    </a>
-	    <a class="brand" href="/">Ocamlmsg</a>
+	    <a class="brand" href="/">Hop</a>
 	    <div class="nav-collapse">
 	      <ul class="nav">
 		<xsl:for-each select="document('nav.xml')/navitems/navitem">
@@ -65,7 +65,7 @@
       </div>
 
       <xsl:copy-of select="script" />
-      <script>Ocamlmsg.install_tap({});</script>
+      <script>Hop.install_tap({});</script>
 
       <script src="bootstrap/js/bootstrap-transition.js"></script>
       <script src="bootstrap/js/bootstrap-alert.js"></script>

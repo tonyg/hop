@@ -1,5 +1,5 @@
 <page>
-  <title>Ocamlmsg</title>
+  <title>Node Index</title>
   <section>nodes</section>
 
   <load>nodes.js</load>

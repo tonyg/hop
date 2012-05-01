@@ -1,4 +1,4 @@
-var Ocamlmsg = {
+var Hop = {
     $tap: null,
     $args: null,
 
@@ -7,19 +7,19 @@ var Ocamlmsg = {
     $close_hooks: [],
 
     run_open_hooks: function (event, stream) {
-	$.each(Ocamlmsg.$open_hooks, function (i, f) { f(event, stream); });
+	$.each(Hop.$open_hooks, function (i, f) { f(event, stream); });
     },
 
     run_message_hooks: function (event, stream) {
-	$.each(Ocamlmsg.$message_hooks, function (i, f) { f(event, stream); });
+	$.each(Hop.$message_hooks, function (i, f) { f(event, stream); });
     },
 
     run_close_hooks: function (event, stream) {
-	$.each(Ocamlmsg.$close_hooks, function (i, f) { f(event, stream); });
+	$.each(Hop.$close_hooks, function (i, f) { f(event, stream); });
     },
 
     _send: function (msg) {
-	Ocamlmsg.$tap.send({data: JSON.stringify(msg)});
+	Hop.$tap.send({data: JSON.stringify(msg)});
     },
 
     _post_msg: function (target, datum, token) {
@@ -27,7 +27,7 @@ var Ocamlmsg = {
     },
 
     post: function (target, datum, token) {
-	Ocamlmsg._send(Ocamlmsg._post_msg(target, datum, token));
+	Hop._send(Hop._post_msg(target, datum, token));
     },
 
     _subscribe_msg: function (filter, sink, name, reply_sink, reply_name) {
@@ -35,14 +35,14 @@ var Ocamlmsg = {
     },
 
     _subscribe: function (source, filter, name, reply_name) {
-	return Ocamlmsg._post_msg(source,
-				  Ocamlmsg._subscribe_msg(filter, Ocamlmsg.$tap.id, name,
-							  reply_name ? Ocamlmsg.$tap.id : "",
-							  reply_name));
+	return Hop._post_msg(source,
+			     Hop._subscribe_msg(filter, Hop.$tap.id, name,
+						reply_name ? Hop.$tap.id : "",
+						reply_name));
     },
 
     subscribe: function (source, filter, name, reply_name) {
-	Ocamlmsg._send(Ocamlmsg._subscribe(source, filter, name, reply_name));
+	Hop._send(Hop._subscribe(source, filter, name, reply_name));
     },
 
     _unsubscribe_msg: function (token) {
@@ -50,11 +50,11 @@ var Ocamlmsg = {
     },
 
     _unsubscribe: function (source, token) {
-	return Ocamlmsg._post_msg(source, Ocamlmsg._unsubscribe_msg(token));
+	return Hop._post_msg(source, Hop._unsubscribe_msg(token));
     },
 
     unsubscribe: function (source, token) {
-	Ocamlmsg._send(Ocamlmsg._unsubscribe(source, token));
+	Hop._send(Hop._unsubscribe(source, token));
     },
 
     _create_msg: function (classname, arg, reply_sink, reply_name) {
@@ -62,43 +62,43 @@ var Ocamlmsg = {
     },
 
     _create: function (classname, arg, reply_name, factory) {
-	return Ocamlmsg._post_msg(factory || "factory",
-				  Ocamlmsg._create_msg(classname, arg,
-						       reply_name ? Ocamlmsg.$tap.id : "",
-						       reply_name));
+	return Hop._post_msg(factory || "factory",
+			     Hop._create_msg(classname, arg,
+					     reply_name ? Hop.$tap.id : "",
+					     reply_name));
     },
 
     create: function (classname, arg, reply_name, factory) {
-	Ocamlmsg._send(Ocamlmsg._create(classname, arg, reply_name, factory));
+	Hop._send(Hop._create(classname, arg, reply_name, factory));
     },
 
     _install_tap: function () {
-	Ocamlmsg.$tap = $.stream("/_/tap", {
+	Hop.$tap = $.stream("/_/tap", {
             type: "http",
             dataType: "json",
 	    enableXDR: true,
 
-            open: Ocamlmsg.run_open_hooks,
-            message: Ocamlmsg.run_message_hooks,
-            error: Ocamlmsg.run_close_hooks,
-            close: Ocamlmsg.run_close_hooks
+            open: Hop.run_open_hooks,
+            message: Hop.run_message_hooks,
+            error: Hop.run_close_hooks,
+            close: Hop.run_close_hooks
 	});
     },
 
     install_tap: function (args) {
-	Ocamlmsg.$args = args;
-	Ocamlmsg._install_tap();
-	setInterval(Ocamlmsg.check_connectivity, 5000);
+	Hop.$args = args;
+	Hop._install_tap();
+	setInterval(Hop.check_connectivity, 5000);
     },
 
     check_connectivity: function () {
-	switch (Ocamlmsg.$tap.readyState) {
+	switch (Hop.$tap.readyState) {
 	case 0: // connecting
 	case 1: // open
 	case 2: // closing
             break;
 	case 3: // closed
-	    Ocamlmsg._install_tap();
+	    Hop._install_tap();
 	}
     }
 }

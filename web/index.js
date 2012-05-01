@@ -36,15 +36,15 @@ function ui_main() {
 
     setInterval(bump_uptime, 1000);
 
-    Ocamlmsg.$open_hooks.push(function (event, stream) {
+    Hop.$open_hooks.push(function (event, stream) {
 	refresh_server_stats();
-	Ocamlmsg.post(stream.id, {"test":true});
-	Ocamlmsg.create("fanout", ["system.log"], "completion1");
-	Ocamlmsg.subscribe("meta", "system.log", "sub_messages", "completion2");
-	Ocamlmsg.subscribe("system.log", "", "log_messages", "completion3");
+	Hop.post(stream.id, {"test":true});
+	Hop.create("fanout", ["system.log"], "completion1");
+	Hop.subscribe("meta", "system.log", "sub_messages", "completion2");
+	Hop.subscribe("system.log", "", "log_messages", "completion3");
     });
-    Ocamlmsg.$close_hooks.push(server_disconnected);
-    Ocamlmsg.$message_hooks.push(function (event, stream) {
+    Hop.$close_hooks.push(server_disconnected);
+    Hop.$message_hooks.push(function (event, stream) {
 	if (!refresh_pending) {
 	    refresh_pending = true;
 	    setTimeout(refresh_server_stats, 1000);

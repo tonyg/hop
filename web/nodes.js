@@ -1,9 +1,6 @@
 function refresh_node_list() {
     $.getJSON("/_/nodes", function (data) {
 	var names = data.nodes;
-	names.push("bar");
-	names.push("foo");
-	names.push("qux");
 	names.sort();
 	var column_count = 4; /* change to match nodes.xml */
 	var per_column = Math.ceil(names.length / column_count);
@@ -29,9 +26,6 @@ function refresh_node_list() {
 }
 
 function nodes_main() {
-    Ocamlmsg.install_tap({
-	open: function (event, stream) {
-	    refresh_node_list();
-        }
-    });
+    Ocamlmsg.$open_hooks.push(refresh_node_list);
+    Ocamlmsg.install_tap({});
 }

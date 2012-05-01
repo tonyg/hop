@@ -53,7 +53,7 @@ let handle_req id r =
     | "GET" | "HEAD" -> Httpd_file.resp_file (Filename.concat "./web" r.Httpd.path)
     | _ -> Httpd.http_error_html 400 ("Unsupported HTTP method "^r.Httpd.verb) []
 
-let cleanup_req id () =
+let cleanup_req id exn =
   match Node.lookup id with
   | Some n -> Node.unbind_all n
   | None -> ()
@@ -92,4 +92,4 @@ let init () =
   register_dispatcher ("/_/server_stats", api_server_stats);
   register_dispatcher ("/_/nodes", api_nodes);
   register_dispatcher ("/_/node/", api_node_info);
-  ignore (Util.create_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)
+  ignore (Util.create_daemon_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)

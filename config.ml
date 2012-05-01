@@ -15,19 +15,33 @@
 (* You should have received a copy of the GNU General Public License *)
 (* along with Ocamlmsg.  If not, see <http://www.gnu.org/licenses/>. *)
 
-open Unix
+open Hof
 
-let rec accept_loop sock connection_start_fn =
-  let (s, peername) = accept sock in
-  setsockopt s TCP_NODELAY true;
-  ignore (connection_start_fn (s, peername));
-  accept_loop sock connection_start_fn
+let config = ref []
 
-let start_net protocol_name port_number connection_start_fn =
-  let sock = socket PF_INET SOCK_STREAM 0 in
-  setsockopt sock SO_REUSEADDR true;
-  bind sock (ADDR_INET (inet_addr_of_string "0.0.0.0", port_number));
-  listen sock 5;
-  Server_control.milestone (protocol_name ^ " ready");
-  Log.info "Accepting connections" [Sexp.Str protocol_name; Sexp.Str (string_of_int port_number)];
-  accept_loop sock connection_start_fn
+let get key =
+  try Some (List.assoc key !config) with Not_found -> None
+
+let get' key default_value =
+  try (List.assoc key !config) with Not_found -> default_value
+
+let push k v =
+  config := (k, v) :: !config
+
+let get_all key =
+  List.filter (fun (k, v) -> k = key) !config
+  |> List.rev_map (fun (k, v) -> v)
+
+let init () =
+  let argv = Sys.argv in
+  let argc = Array.length argv in
+  let rec loop index current_key =
+    if index >= argc
+    then ()
+    else
+      (let opt = argv.(index) in
+      if Util.starts_with opt "--"
+      then loop (index + 1) (String.sub opt 2 (String.length opt - 2))
+      else (push current_key opt;
+	    loop (index + 1) current_key))
+  in loop 1 ""

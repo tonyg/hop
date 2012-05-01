@@ -23,11 +23,20 @@ let hook_log () =
   in
   Log.hook := new_hook
 
+let create_ready_file () =
+  match Config.get "ready-file" with
+  | Some ready_file_path ->
+      Log.info "Creating ready file" [Sexp.Str ready_file_path];
+      close_out (open_out ready_file_path)
+  | None ->
+      ()
+
 let _ =
   Printf.printf "%s %s, %s\n%s\n%!"
     App_info.product App_info.version App_info.copyright App_info.licence_blurb;
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Uuid.init ();
+  Config.init ();
   Factory.init ();
   Queuenode.init ();
   Fanoutnode.init ();
@@ -38,4 +47,11 @@ let _ =
   Ui_main.init ();
   Ui_relay.init ();
   (* Speedtest.init (); *)
-  Net.start_net "Hop" 5671 Relay.start
+  Relay.init ();
+  Server_control.run_until "AMQP ready";
+  Server_control.run_until "HTTP ready";
+  Server_control.run_until "Hop ready";
+  if Server_control.is_running ()
+  then (create_ready_file ();
+	Server_control.run_forever ())
+  else ()

@@ -76,3 +76,6 @@ let relay_mainloop (peername, mtx, cin, cout) n =
 let start (s, peername) =
   Connections.start_connection "relay" issue_banner
     relay_boot relay_handler relay_mainloop (s, peername)
+
+let init () =
+  ignore (Util.create_daemon_thread "Hop listener" None (Net.start_net "Hop" 5671) start)

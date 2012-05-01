@@ -28,10 +28,19 @@ let create_thread name cleanup main initarg =
     with e ->
       Log.warn "Thread died with exception" [Str name; Str (Printexc.to_string e)];
       (match cleanup with
-      | Some cleaner -> cleaner ()
+      | Some cleaner -> cleaner e
       | None -> ())
   in
   Thread.create guarded_main initarg
+
+let daemon_thread_died name nested_cleaner e =
+  (match nested_cleaner with
+  | Some c -> c e
+  | None -> ());
+  Server_control.shutdown_now [Sexp.Str "Daemon thread exited"; Sexp.Str name]
+
+let create_daemon_thread name cleanup main initarg =
+  create_thread name (Some (daemon_thread_died name cleanup)) main initarg
 
 let with_mutex m f arg =
   Mutex.lock m;

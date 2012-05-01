@@ -20,7 +20,10 @@
       <link rel="stylesheet" type="text/css" href="ui.css" />
       <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
       <script type="text/javascript" src="jquery.stream-1.2.js"></script>
-      <script type="text/javascript" src="ui_main.js"></script>
+      <script type="text/javascript" src="ocamlmsg.js"></script>
+      <xsl:for-each select="load">
+	<script type="text/javascript" src="{text()}"></script>
+      </xsl:for-each>
       <xsl:comment>[if lt IE 9]<xsl:text disable-output-escaping="yes">&gt;
 	  &lt;script src="http://html5shim.googlecode.com/svn/trunk/html5.js"&gt;&lt;/script&gt;
 	  &lt;!</xsl:text>[endif]

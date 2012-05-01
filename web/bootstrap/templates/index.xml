@@ -1,6 +1,10 @@
 <page>
   <title>Ocamlmsg</title>
   <section>main</section>
+
+  <load>index.js</load>
+  <script>$(document).ready(ui_main);</script>
+
   <body>
     <h2>Server statistics</h2>
     <table class="table">
@@ -28,6 +32,4 @@
     <h2>Debug</h2>
     <pre id="debug_container"></pre>
   </body>
-
-  <script>$(document).ready(ui_main);</script>
 </page>

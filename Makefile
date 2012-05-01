@@ -1,4 +1,4 @@
-APP=ocamlmsg
+APP=hop_server
 TEMPLATES=$(wildcard web/bootstrap/templates/*.xml)
 HTML=$(subst web/bootstrap/templates/,web/,$(subst .xml,.html,$(TEMPLATES)))
 

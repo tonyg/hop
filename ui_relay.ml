@@ -15,6 +15,8 @@
 (* You should have received a copy of the GNU General Public License *)
 (* along with Ocamlmsg.  If not, see <http://www.gnu.org/licenses/>. *)
 
+open Hof
+
 type outbound_message =
   | Data of Sexp.t
   | Heartbeat
@@ -44,19 +46,19 @@ let rec api_tap_source id r =
     handle_message n (Message.subscribe (Sexp.Str (Node.local_container_name()),
 					 Sexp.Str "", Sexp.Str "",
 					 Sexp.Str "", Sexp.Str ""));
-    Httpd.add_completion_callback
-      (Httpd.resp_generic 200 "Streaming"
-	 ([Httpd.text_content_type_header;
-	   "Access-Control-Allow-Origin", "*";
-	   "Date", Httpd_date.http_gmtime (Unix.time ())]
-	  @ Httpd.disable_cache_headers ())
-	 (Httpd.Variable
-	    (Stringstream.switch_after 131072
-	       (Stringstream.seq id_block_and_padding (Stringstream.make (message_stream ch)))
-	       Stringstream.empty)))
-      (fun _ ->
-	Node.unbind_all n;
-	Squeue.add Shutdown ch)
+    Httpd.resp_generic 200 "Streaming"
+      [Httpd.text_content_type_header;
+       "Access-Control-Allow-Origin", "*"]
+      (Httpd.Variable
+	 (Stringstream.switch_after 131072
+	    (Stringstream.seq id_block_and_padding (Stringstream.make (message_stream ch)))
+	    Stringstream.empty))
+    |> Httpd.add_disable_cache_headers
+    |> Httpd.add_date_header
+    |> Httpd.add_completion_callback
+	(fun _ ->
+	  Node.unbind_all n;
+	  Squeue.add Shutdown ch)
 
 let api_tap_sink irrelevant_id r =
   let params = Httpd.parse_urlencoded (Httpd.string_of_content r.Httpd.req_body.Httpd.content) in

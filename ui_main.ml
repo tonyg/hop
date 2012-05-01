@@ -16,6 +16,7 @@
 (* along with Ocamlmsg.  If not, see <http://www.gnu.org/licenses/>. *)
 
 open Html
+open Hof
 
 let dispatch_table = ref []
 
@@ -65,6 +66,7 @@ let api_server_stats id r =
 		      "boot_time", Json.Num boot_time;
 		      "uptime", Json.Num (Unix.time () -. boot_time);
 		      "classes", Json.Arr (List.map Json.str (Factory.all_class_names ()))])
+  |> Httpd.add_date_header
 
 let init () =
   register_dispatcher ("/_/server_stats", api_server_stats);

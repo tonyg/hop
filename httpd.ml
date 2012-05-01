@@ -62,7 +62,15 @@ let disable_cache_headers () =
    "Cache-Control", "no-cache, must-revalidate, max-age=0";
    "Pragma", "no-cache"]
 
-let add_completion_callback resp cb =
+let add_headers headers resp =
+  let b = resp.resp_body in
+  {resp with resp_body = {b with headers = b.headers @ headers}}
+
+let add_disable_cache_headers resp = add_headers (disable_cache_headers ()) resp
+
+let add_date_header resp = add_headers ["Date", Httpd_date.http_gmtime (Unix.time ())] resp
+
+let add_completion_callback cb resp =
   {resp with completion_callbacks = cb :: resp.completion_callbacks}
 
 let http_error code reason body = raise (HTTPError (code, reason, body))

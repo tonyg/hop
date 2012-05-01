@@ -17,6 +17,7 @@
 
 open Html
 open Hof
+open Datastructures
 
 let dispatch_table = ref []
 
@@ -33,8 +34,13 @@ let handle_dynamic_req id r =
 	Httpd.http_error_html 404 "Not found"
 	  [Html.tag "p" [] [Html.text ("No route for URL path "^r.Httpd.path)]]
     | (prefix, handler) :: rest ->
-	if Util.starts_with r.Httpd.path prefix
-	then handler id r
+	let wholepath = r.Httpd.path in
+	if Util.starts_with wholepath prefix
+	then
+	  (let wholepath_len = String.length wholepath in
+	  let prefix_len = String.length prefix in
+	  let suffix = String.sub wholepath prefix_len (wholepath_len - prefix_len) in
+	  handler suffix id r)
 	else search_table rest
   in
   search_table !dispatch_table
@@ -60,7 +66,7 @@ let start (s, peername) =
     (s, peername)
 
 let boot_time = Unix.time ()
-let api_server_stats id r =
+let api_server_stats _ id r =
   Json.resp_ok [] (Json.Rec
 		     ["connection_count", Json.Num (float_of_int !Connections.connection_count);
 		      "boot_time", Json.Num boot_time;
@@ -68,6 +74,22 @@ let api_server_stats id r =
 		      "classes", Json.Arr (List.map Json.str (Factory.all_class_names ()))])
   |> Httpd.add_date_header
 
+let api_nodes _ id r =
+  Json.resp_ok [] (Json.Rec ["nodes", Json.Arr (List.map Json.str (Node.all_node_names ()))])
+  |> Httpd.add_date_header
+
+let api_node_info suffix id r =
+  (match Node.lookup suffix with
+  | Some n ->
+      Json.resp_ok [] (Json.Rec
+			 ["names", Json.Arr (List.map Json.str (StringSet.elements n.Node.names));
+			  "class_name", Json.Str n.Node.class_name])
+  | None ->
+      Json.resp 404 "No such node name" [] Json.Nil)
+  |> Httpd.add_date_header
+
 let init () =
   register_dispatcher ("/_/server_stats", api_server_stats);
+  register_dispatcher ("/_/nodes", api_nodes);
+  register_dispatcher ("/_/node/", api_node_info);
   ignore (Util.create_thread "HTTP listener" None (Net.start_net "HTTP" 5678) start)

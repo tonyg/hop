@@ -41,6 +41,8 @@ let lookup name =
   try Some (StringMap.find name !directory)
   with Not_found -> None
 
+let all_node_names () = string_map_keys !directory
+
 (* Approximate because it doesn't lock or run in a transaction *)
 let approx_exists name = StringMap.mem name !directory
 

@@ -1,0 +1,5 @@
+.truncate-overflow div ul li a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -1,3 +1,4 @@
 <navitems>
   <navitem id="main" href="/">Main</navitem>
+  <navitem id="nodes" href="/nodes.html">Nodes</navitem>
 </navitems>

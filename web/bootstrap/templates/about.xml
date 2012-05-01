@@ -7,6 +7,12 @@
       Ocamlmsg is a prototype of a sensible recursive message broker.
     </p>
 
+    <h2>Homepage</h2>
+    <p>
+      The project is currently hosted on github at <a
+      href="http://github.com/tonyg/ocamlmsg/">http://github.com/tonyg/ocamlmsg/</a>.
+    </p>
+
     <h2>Copyright &amp; Licence</h2>
     <p>
       Ocamlmsg is Copyright (C) 2012 Tony Garnock-Jones.

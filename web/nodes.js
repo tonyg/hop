@@ -27,5 +27,4 @@ function refresh_node_list() {
 
 function nodes_main() {
     Ocamlmsg.$open_hooks.push(refresh_node_list);
-    Ocamlmsg.install_tap({});
 }

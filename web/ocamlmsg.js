@@ -3,10 +3,15 @@ var Ocamlmsg = {
     $args: null,
 
     $open_hooks: [],
+    $message_hooks: [],
     $close_hooks: [],
 
     run_open_hooks: function (event, stream) {
 	$.each(Ocamlmsg.$open_hooks, function (i, f) { f(event, stream); });
+    },
+
+    run_message_hooks: function (event, stream) {
+	$.each(Ocamlmsg.$message_hooks, function (i, f) { f(event, stream); });
     },
 
     run_close_hooks: function (event, stream) {
@@ -67,21 +72,33 @@ var Ocamlmsg = {
 	Ocamlmsg._send(Ocamlmsg._create(classname, arg, reply_name, factory));
     },
 
-    install_tap: function (args) {
-	Ocamlmsg.$args = args;
+    _install_tap: function () {
 	Ocamlmsg.$tap = $.stream("/_/tap", {
             type: "http",
             dataType: "json",
 	    enableXDR: true,
 
             open: Ocamlmsg.run_open_hooks,
-            message: args.message,
+            message: Ocamlmsg.run_message_hooks,
             error: Ocamlmsg.run_close_hooks,
             close: Ocamlmsg.run_close_hooks
 	});
     },
 
-    force_reinstall: function () {
-	Ocamlmsg.install_tap(Ocamlmsg.$args);
+    install_tap: function (args) {
+	Ocamlmsg.$args = args;
+	Ocamlmsg._install_tap();
+	setInterval(Ocamlmsg.check_connectivity, 5000);
+    },
+
+    check_connectivity: function () {
+	switch (Ocamlmsg.$tap.readyState) {
+	case 0: // connecting
+	case 1: // open
+	case 2: // closing
+            break;
+	case 3: // closed
+	    Ocamlmsg._install_tap();
+	}
     }
 }

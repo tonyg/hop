@@ -39,10 +39,9 @@
 	      <span class="icon-bar"></span>
 	      <span class="icon-bar"></span>
 	    </a>
-	    <a class="brand" href="http://github.com/tonyg/ocamlmsg/">Ocamlmsg</a>
+	    <a class="brand" href="/">Ocamlmsg</a>
 	    <div class="nav-collapse">
 	      <ul class="nav">
-		<li class="btn-danger"><a href="about.html">About</a></li>
 		<xsl:for-each select="document('nav.xml')/navitems/navitem">
 		  <li>
 		    <xsl:if test="@id = $active-section">
@@ -54,6 +53,7 @@
 	      </ul>
 	      <ul class="nav pull-right">
 		<li><a id="server_status_message_container"><span id="server_status_message">Connected</span></a></li>
+		<li><a href="about.html">About</a></li>
 	      </ul>
 	    </div>
 	  </div>
@@ -65,6 +65,7 @@
       </div>
 
       <xsl:copy-of select="script" />
+      <script>Ocamlmsg.install_tap({});</script>
 
       <script src="bootstrap/js/bootstrap-transition.js"></script>
       <script src="bootstrap/js/bootstrap-alert.js"></script>

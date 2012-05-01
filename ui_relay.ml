@@ -77,7 +77,10 @@ let api_tap_sink irrelevant_id r =
 	  | _ ->
 	      Httpd.http_error_html 406 "Message not understood" [])
       | _ -> Httpd.http_error_html 406 "Bad data parameter" [])
-  | _ -> Httpd.http_error_html 406 "Unsupported metadata.type" []
+  | Some (Some "close") ->
+      Httpd.resp_generic_ok [] Httpd.empty_content
+  | _ ->
+      Httpd.http_error_html 406 "Unsupported metadata.type" []
 
 let api_tap _ id r =
   match r.Httpd.verb with

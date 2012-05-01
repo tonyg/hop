@@ -21,6 +21,7 @@
       <script type="text/javascript" src="jquery-1.7.2.min.js"></script>
       <script type="text/javascript" src="jquery.stream-1.2.js"></script>
       <script type="text/javascript" src="ocamlmsg.js"></script>
+      <script type="text/javascript" src="global.js"></script>
       <xsl:for-each select="load">
 	<script type="text/javascript" src="{text()}"></script>
       </xsl:for-each>
@@ -50,6 +51,9 @@
 		    <a href="{@href}"><xsl:value-of select="text()"/></a>
 		  </li>
 		</xsl:for-each>
+	      </ul>
+	      <ul class="nav pull-right">
+		<li><a id="server_status_message_container"><span id="server_status_message">Connected</span></a></li>
 	      </ul>
 	    </div>
 	  </div>

@@ -2,6 +2,17 @@ var Ocamlmsg = {
     $tap: null,
     $args: null,
 
+    $open_hooks: [],
+    $close_hooks: [],
+
+    run_open_hooks: function (event, stream) {
+	$.each(Ocamlmsg.$open_hooks, function (i, f) { f(event, stream); });
+    },
+
+    run_close_hooks: function (event, stream) {
+	$.each(Ocamlmsg.$close_hooks, function (i, f) { f(event, stream); });
+    },
+
     _send: function (msg) {
 	Ocamlmsg.$tap.send({data: JSON.stringify(msg)});
     },
@@ -63,10 +74,10 @@ var Ocamlmsg = {
             dataType: "json",
 	    enableXDR: true,
 
-            open: args.open,
+            open: Ocamlmsg.run_open_hooks,
             message: args.message,
-            error: args.close,
-            close: args.close
+            error: Ocamlmsg.run_close_hooks,
+            close: Ocamlmsg.run_close_hooks
 	});
     },
 

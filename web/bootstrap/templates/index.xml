@@ -9,10 +9,6 @@
     <h2>Server statistics</h2>
     <table class="table">
       <tr>
-	<th class="span6">Server Status</th>
-	<td class="span6" id="server_ok">OK</td>
-      </tr>
-      <tr>
 	<th class="span6">Connection count</th>
 	<td class="span6" id="server_stats_connection_count"></td>
       </tr>

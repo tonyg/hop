@@ -53,5 +53,6 @@ let _ =
   Server_control.run_until "Hop ready";
   if Server_control.is_running ()
   then (create_ready_file ();
+	Server_control.milestone "Server initialized";
 	Server_control.run_forever ())
   else ()

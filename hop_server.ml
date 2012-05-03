@@ -46,7 +46,6 @@ let _ =
   Amqp_relay.init ();
   Ui_main.init ();
   Ui_relay.init ();
-  (* Speedtest.init (); *)
   Relay.init ();
   Server_control.run_until "AMQP ready";
   Server_control.run_until "HTTP ready";

@@ -53,14 +53,19 @@ let add v q =
 let _locked_empty q =
   q.capacity = (Array.length q.queue)
 
+let _locked_pop q =
+  let result = Array.get q.queue q.read_pointer in
+  Array.set q.queue q.read_pointer (Obj.magic None);
+  q.read_pointer <- (q.read_pointer + 1) mod (Array.length q.queue);
+  q.capacity <- q.capacity + 1;
+  result
+
 let pop q =
   Mutex.lock q.mtx;
   while _locked_empty q do
     Condition.wait q.nonempty q.mtx
   done;
-  let result = Array.get q.queue q.read_pointer in
-  q.read_pointer <- (q.read_pointer + 1) mod (Array.length q.queue);
-  q.capacity <- q.capacity + 1;
+  let result = _locked_pop q in
   Condition.signal q.nonfull;
   Mutex.unlock q.mtx;
   result
@@ -70,12 +75,8 @@ let peek q =
   let result =
     if _locked_empty q
     then None
-    else
-      (let result = Array.get q.queue q.read_pointer in
-      q.read_pointer <- (q.read_pointer + 1) mod (Array.length q.queue);
-      q.capacity <- q.capacity + 1;
-      Condition.signal q.nonfull;
-      Some result)
+    else (Condition.signal q.nonfull;
+	  Some (_locked_pop q))
   in
   Mutex.unlock q.mtx;
   result

@@ -138,3 +138,19 @@ let input_sexp ch = input_sexp_outer (fun () -> input_char ch) (input_bytes ch)
 let parse b = input_sexp_outer (fun () -> Ibuffer.next_char b) (Ibuffer.next_chars b)
 let sexp_of_string s = parse (Ibuffer.of_string s)
 let string_of_sexp x = Stringstream.to_string (stream_of_sexp x)
+
+let assoc' key v =
+  match v with
+  | Arr entries ->
+      let rec search entries =
+	match entries with
+	| [] -> None
+	| (Arr (k :: result :: _)) :: _ when k = key -> Some result
+	| _ :: rest -> search rest
+      in search entries
+  | _ -> None
+
+let assoc k default v =
+  match assoc' k v with
+  | Some result -> result
+  | None -> default

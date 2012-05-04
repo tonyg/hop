@@ -22,9 +22,7 @@ type 'a t = {
     mutable capacity: int;
     nonfull: Condition.t;
     nonempty: Condition.t;
-    queue: 'a array;
-    mutable read_pointer: int;
-    mutable write_pointer: int;
+    queue: 'a Queue.t
   }
 
 let create n = {
@@ -32,9 +30,7 @@ let create n = {
   capacity = n;
   nonfull = Condition.create ();
   nonempty = Condition.create ();
-  queue = Array.make n (Obj.magic None);
-  read_pointer = 0;
-  write_pointer = 0
+  queue = Queue.create ()
 }
 
 let approx_capacity q = q.capacity
@@ -45,27 +41,17 @@ let add v q =
     Condition.wait q.nonfull q.mtx
   done;
   q.capacity <- q.capacity - 1;
-  Array.set q.queue q.write_pointer v;
-  q.write_pointer <- (q.write_pointer + 1) mod (Array.length q.queue);
+  Queue.add v q.queue;
   Condition.signal q.nonempty;
   Mutex.unlock q.mtx
 
-let _locked_empty q =
-  q.capacity = (Array.length q.queue)
-
-let _locked_pop q =
-  let result = Array.get q.queue q.read_pointer in
-  Array.set q.queue q.read_pointer (Obj.magic None);
-  q.read_pointer <- (q.read_pointer + 1) mod (Array.length q.queue);
-  q.capacity <- q.capacity + 1;
-  result
-
 let pop q =
   Mutex.lock q.mtx;
-  while _locked_empty q do
+  while Queue.is_empty q.queue do
     Condition.wait q.nonempty q.mtx
   done;
-  let result = _locked_pop q in
+  let result = Queue.pop q.queue in
+  q.capacity <- q.capacity + 1;
   Condition.signal q.nonfull;
   Mutex.unlock q.mtx;
   result
@@ -73,10 +59,11 @@ let pop q =
 let peek q =
   Mutex.lock q.mtx;
   let result =
-    if _locked_empty q
+    if Queue.is_empty q.queue
     then None
-    else (Condition.signal q.nonfull;
-	  Some (_locked_pop q))
+    else (q.capacity <- q.capacity + 1;
+	  Condition.signal q.nonfull;
+	  Some (Queue.pop q.queue))
   in
   Mutex.unlock q.mtx;
   result

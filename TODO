@@ -1,3 +1,3 @@
  - ui_relay.ml: deal with Message.Subscribe and .Unsubscribe as well as .Post in api_tap_sink
  - web: add cache control information to served responses
- - add node bound / node unbound event handlers in nodes.js to update the list as it changes
+ - use lazy and Lazy.force where appropriate

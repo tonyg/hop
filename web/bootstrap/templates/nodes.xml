@@ -6,24 +6,9 @@
   <script>$(document).ready(nodes_main);</script>
 
   <body>
+    <p class="pull-right">Filter nodes: <input id="node_filter" /></p>
     <h2>Nodes</h2>
-    <div class="row truncate-overflow">
-      <div class="span3">
-	<ul id="nodes0">
-	</ul>
-      </div>
-      <div class="span3">
-	<ul id="nodes1">
-	</ul>
-      </div>
-      <div class="span3">
-	<ul id="nodes2">
-	</ul>
-      </div>
-      <div class="span3">
-	<ul id="nodes3">
-	</ul>
-      </div>
+    <div id="all_node_classes">
     </div>
   </body>
 </page>

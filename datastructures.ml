@@ -20,3 +20,19 @@ module StringMap = Map.Make(String)
 module UuidSet = StringSet
 
 let string_map_keys m = StringMap.fold (fun k _ acc -> k :: acc) m []
+
+let classify f xs =
+  let rec loop acc xs =
+    match xs with
+    | [] -> acc
+    | x :: xs' ->
+	(match f x with
+	| Some (classification, v) ->
+	    loop
+	      (StringMap.add
+		 classification
+		 (v :: (try StringMap.find classification acc with Not_found -> []))
+		 acc)
+	      xs'
+	| None -> loop acc xs')
+  in loop StringMap.empty xs

@@ -75,7 +75,17 @@ let api_server_stats _ id r =
   |> Httpd.add_date_header
 
 let api_nodes _ id r =
-  Json.resp_ok [] (Json.Rec ["nodes", Json.Arr (List.map Json.str (Node.all_node_name_strings ()))])
+  let by_class_name name =
+    match Node.lookup name with
+    | Some n -> Some (n.Node.class_name, name.Node.label)
+    | None -> None
+  in
+  let info = classify by_class_name (Node.all_node_names ()) in
+  Json.resp_ok []
+    (Json.Rec
+       (List.map
+	  (fun (class_name, node_names) -> (class_name, Json.Arr (List.map Json.str node_names)))
+	  (StringMap.bindings info)))
   |> Httpd.add_date_header
 
 let api_node_info suffix id r =

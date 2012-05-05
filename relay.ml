@@ -31,17 +31,17 @@ let send_sexp_syntax_error ch explanation =
 let dispatch_message n ch m =
   match m with
   | Message.Post (Str name, body, token) ->
-      Node.send_ignore name body
+      Node.send_ignore' name body
   | Message.Subscribe (Str filter, sink, name, Str reply_sink, Str reply_name) ->
-      if Node.bind(filter, n)
-      then Node.post_ignore
+      if Node.bind (Node.name_of_string filter, n)
+      then Node.post_ignore'
 	  reply_sink
 	  (Str reply_name)
 	  (Message.subscribe_ok (Str filter))
 	  (Str "")
       else Log.warn "Bind failed" [Str filter]
   | Message.Unsubscribe (Str token) ->
-      if Node.unbind token
+      if Node.unbind (Node.name_of_string token)
       then ()
       else Log.warn "Unbind failed" [Str token]
   | _ ->

@@ -19,7 +19,7 @@ open Sexp
 open Status
 
 type t = {
-    name: string;
+    name: Node.name;
     subscriptions: Subscription.set_t;
     ch: Message.t Squeue.t;
     mutable backlog: Sexp.t Queue.t;
@@ -83,17 +83,17 @@ let shoveller info =
 
 let queue_factory arg =
   match arg with
-  | (Arr [Str name]) ->
+  | (Arr [Str name_str]) ->
       let info = {
-	name = name;
+	name = Node.name_of_string name_str;
 	subscriptions = Subscription.new_set ();
 	ch = Squeue.create 1000;
 	backlog = Queue.create ();
 	waiters = Queue.create ()
       } in
-      ignore (Util.create_thread name None shoveller info);
+      ignore (Util.create_thread name_str None shoveller info);
       let queue_handler n sexp = Squeue.add (Message.message_of_sexp sexp) info.ch in
-      replace_ok (Node.make_idempotent_named classname name queue_handler) (Str name)
+      replace_ok (Node.make_idempotent_named classname info.name queue_handler) (Str name_str)
   | _ ->
       Problem (Str "bad-arg")
 

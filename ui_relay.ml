@@ -42,7 +42,8 @@ let rec api_tap_source id r =
   if not (Node.bind (id, n))
   then Httpd.http_error_html 500 "Internal ID collision" []
   else
-    let id_block_and_padding = Stringstream.const_flush (id ^ ";" ^ String.make 2048 'h' ^ ";") in
+    let id_block_and_padding =
+      Stringstream.const_flush (id.Node.label ^ ";" ^ String.make 2048 'h' ^ ";") in
     handle_message n (Message.subscribe (Sexp.Str (Node.local_container_name()),
 					 Sexp.Str "", Sexp.Str "",
 					 Sexp.Str "", Sexp.Str ""));
@@ -72,7 +73,7 @@ let api_tap_sink irrelevant_id r =
 	    with _ -> Httpd.http_error_html 406 "Bad data parameter" []) in
 	  (match Message.message_of_sexp data with
 	  | Message.Post (Sexp.Str name, body, token) ->
-	      Node.send_ignore name body;
+	      Node.send_ignore' name body;
 	      Httpd.resp_generic 202 "Accepted" [] (Httpd.empty_content)
 	  | _ ->
 	      Httpd.http_error_html 406 "Message not understood" [])

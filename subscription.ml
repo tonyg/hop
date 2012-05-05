@@ -21,7 +21,7 @@ type t = {
     mutable live: bool;
     uuid: Uuid.t;
     filter: Sexp.t;
-    sink: string;
+    sink: Node.name;
     name: Sexp.t
   }
 
@@ -31,8 +31,9 @@ let new_set () = ref StringMap.empty
 
 let count subs = StringMap.cardinal !subs
 
-let create source subs filter sink name reply_sink reply_name =
+let create source subs filter sink_str name reply_sink reply_name =
   let uuid = Uuid.create () in
+  let sink = Node.name_of_string sink_str in
   let sub = {
     live = true;
     uuid = uuid;
@@ -41,8 +42,8 @@ let create source subs filter sink name reply_sink reply_name =
     name = name
   } in
   subs := StringMap.add uuid sub !subs;
-  Meta.announce_subscription source filter sink name true;
-  Node.post_ignore reply_sink reply_name (Message.subscribe_ok (Sexp.Str uuid)) (Sexp.Str "");
+  Meta.announce_subscription source filter sink_str name true;
+  Node.post_ignore' reply_sink reply_name (Message.subscribe_ok (Sexp.Str uuid)) (Sexp.Str "");
   sub
 
 let delete source subs uuid =
@@ -50,7 +51,7 @@ let delete source subs uuid =
     let sub = StringMap.find uuid !subs in
     sub.live <- false;
     subs := StringMap.remove uuid !subs;
-    Meta.announce_subscription source sub.filter sub.sink sub.name false;
+    Meta.announce_subscription source sub.filter sub.sink.Node.label sub.name false;
     Some sub
   with Not_found ->
     None

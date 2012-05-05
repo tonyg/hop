@@ -59,7 +59,7 @@ let cleanup_req id exn =
   | None -> ()
 
 let start (s, peername) =
-  let id = "http-" ^ Uuid.create () in
+  let id = Node.name_of_string ("http-" ^ Uuid.create ()) in
   Util.create_thread (Connections.endpoint_name peername ^ " HTTP service")
     (Some (cleanup_req id))
     (Httpd.main (handle_req id))
@@ -75,11 +75,11 @@ let api_server_stats _ id r =
   |> Httpd.add_date_header
 
 let api_nodes _ id r =
-  Json.resp_ok [] (Json.Rec ["nodes", Json.Arr (List.map Json.str (Node.all_node_names ()))])
+  Json.resp_ok [] (Json.Rec ["nodes", Json.Arr (List.map Json.str (Node.all_node_name_strings ()))])
   |> Httpd.add_date_header
 
 let api_node_info suffix id r =
-  (match Node.lookup suffix with
+  (match Node.lookup (Node.name_of_string suffix) with
   | Some n ->
       Json.resp_ok [] (Json.Rec
 			 ["names", Json.Arr (List.map Json.str (StringSet.elements n.Node.names));

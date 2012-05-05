@@ -15,10 +15,12 @@
 (* You should have received a copy of the GNU General Public License *)
 (* along with Hop.  If not, see <http://www.gnu.org/licenses/>. *)
 
+let n_system_log = Node.name_of_string "system.log"
+
 let hook_log () =
   let old_hook = !Log.hook in
   let new_hook label body =
-    ignore (Node.post "system.log" (Sexp.Str label) body (Sexp.Str ""));
+    ignore (Node.post n_system_log (Sexp.Str label) body (Sexp.Str ""));
     old_hook label body
   in
   Log.hook := new_hook

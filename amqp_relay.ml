@@ -26,12 +26,12 @@ type connection_t = {
     mtx: Mutex.t;
     cin: in_channel;
     cout: out_channel;
-    name: Uuid.t;
+    name: Node.name;
     mutable input_buf: string;
     mutable output_buf: Buffer.t;
     mutable frame_max: int;
     mutable connection_closed: bool;
-    mutable recent_queue_name: string option;
+    mutable recent_queue_name: Node.name option;
     mutable delivery_tag: int
   }
 
@@ -43,7 +43,7 @@ let amqp_boot (peername, mtx, cin, cout) = {
   mtx = mtx;
   cin = cin;
   cout = cout;
-  name = Uuid.create ();
+  name = Node.name_of_string (Uuid.create ());
   input_buf = String.create initial_frame_size;
   output_buf = Buffer.create initial_frame_size;
   frame_max = initial_frame_size;
@@ -251,7 +251,7 @@ let get_recent_queue_name conn =
 let expand_mrdq conn queue =
   match queue with
   | "" -> get_recent_queue_name conn
-  | other -> other
+  | other -> Node.name_of_string other
 
 let handle_method conn channel m =
   if channel > 1 then die channel_error "Unsupported channel number" else ();
@@ -269,27 +269,27 @@ let handle_method conn channel m =
   | Channel_close_ok ->
       ()
   | Exchange_declare (exchange, type_, passive, durable, no_wait, arguments) ->
-      Node.send_ignore "factory" (Message.create (Sexp.Str type_,
-						  Sexp.Arr [Sexp.Str exchange],
-						  Sexp.Str conn.name,
-						  Sexp.Str "Exchange_declare_reply"))
+      Node.send_ignore' "factory" (Message.create (Sexp.Str type_,
+						   Sexp.Arr [Sexp.Str exchange],
+						   Sexp.Str conn.name.Node.label,
+						   Sexp.Str "Exchange_declare_reply"))
   | Queue_declare (queue, passive, durable, exclusive, auto_delete, no_wait, arguments) ->
       let queue = (if queue = "" then Uuid.create () else queue) in
-      conn.recent_queue_name <- Some queue;
-      Node.send_ignore "factory" (Message.create (Sexp.Str "queue",
-						  Sexp.Arr [Sexp.Str queue],
-						  Sexp.Str conn.name,
-						  Sexp.Str "Queue_declare_reply"))
+      conn.recent_queue_name <- Some (Node.name_of_string queue);
+      Node.send_ignore' "factory" (Message.create (Sexp.Str "queue",
+						   Sexp.Arr [Sexp.Str queue],
+						   Sexp.Str conn.name.Node.label,
+						   Sexp.Str "Queue_declare_reply"))
   | Queue_bind (queue, exchange, routing_key, no_wait, arguments) ->
       let queue = expand_mrdq conn queue in
       if not (Node.approx_exists queue)
-      then send_warning conn not_found ("Queue "^queue^" not found")
+      then send_warning conn not_found ("Queue "^queue.Node.label^" not found")
       else
-	if Node.send exchange (Message.subscribe (Sexp.Str routing_key,
-						  Sexp.Str queue,
-						  Sexp.Str "",
-						  Sexp.Str conn.name,
-						  Sexp.Str "Queue_bind_reply"))
+	if Node.send' exchange (Message.subscribe (Sexp.Str routing_key,
+						   Sexp.Str queue.Node.label,
+						   Sexp.Str "",
+						   Sexp.Str conn.name.Node.label,
+						   Sexp.Str "Queue_bind_reply"))
 	then ()
 	else send_warning conn not_found ("Exchange "^exchange^" not found")
   | Basic_consume (queue, consumer_tag, no_local, no_ack, exclusive, no_wait, arguments) ->
@@ -297,16 +297,16 @@ let handle_method conn channel m =
       let consumer_tag = (if consumer_tag = "" then Uuid.create () else consumer_tag) in
       if Node.send queue (Message.subscribe
 			    (Sexp.Str "",
-			     Sexp.Str conn.name,
+			     Sexp.Str conn.name.Node.label,
 			     Sexp.Arr [Sexp.Str "delivery"; Sexp.Str consumer_tag],
-			     Sexp.Str conn.name,
+			     Sexp.Str conn.name.Node.label,
 			     Sexp.Arr [Sexp.Str "Basic_consume_reply"; Sexp.Str consumer_tag]))
       then ()
-      else send_warning conn not_found ("Queue "^queue^" not found")
+      else send_warning conn not_found ("Queue "^queue.Node.label^" not found")
   | Basic_publish (exchange, routing_key, false, false) ->
       let (_, (body_size, properties)) = next_header conn in
       let body = recv_content_body conn body_size in
-      if Node.post exchange
+      if Node.post' exchange
 	  (Sexp.Str routing_key)
 	  (Sexp.Hint {Sexp.hint = Sexp.Str "amqp";
 		      Sexp.body = Sexp.Arr [Sexp.Str exchange;
@@ -400,11 +400,11 @@ let start (s, peername) =
     amqp_boot amqp_handler amqp_mainloop (s, peername)
 
 let init () =
-  Node.send_ignore "factory" (Message.create (Sexp.Str "direct",
-					      Sexp.Arr [Sexp.Str "amq.direct"],
-					      Sexp.Str "", Sexp.Str ""));
-  Node.send_ignore "factory" (Message.create (Sexp.Str "fanout",
-					      Sexp.Arr [Sexp.Str "amq.fanout"],
-					      Sexp.Str "", Sexp.Str ""));
+  Node.send_ignore' "factory" (Message.create (Sexp.Str "direct",
+					       Sexp.Arr [Sexp.Str "amq.direct"],
+					       Sexp.Str "", Sexp.Str ""));
+  Node.send_ignore' "factory" (Message.create (Sexp.Str "fanout",
+					       Sexp.Arr [Sexp.Str "amq.fanout"],
+					       Sexp.Str "", Sexp.Str ""));
   ignore (Util.create_daemon_thread
 	    "AMQP listener" None (Net.start_net "AMQP" Amqp_spec.port) start)

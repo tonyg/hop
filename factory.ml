@@ -59,9 +59,9 @@ let factory_handler n sexp =
 	    Log.warn "Node class not found" [Str classname];
 	    Message.create_failed (Arr [Str "factory"; Str "class-not-found"])
       in
-      Node.post_ignore reply_sink (Str reply_name) reply (Str "")
+      Node.post_ignore' reply_sink (Str reply_name) reply (Str "")
   | m ->
       Util.message_not_understood "factory" m
 
 let init () =
-  Node.bind_ignore ("factory", Node.make "factory" factory_handler)
+  Node.bind_ignore (Node.name_of_string "factory", Node.make "factory" factory_handler)

@@ -17,12 +17,14 @@
 
 open Sexp
 
+let n_meta = Node.name_of_string "meta"
+
 let announce_subscription source filter sink name on_off =
-  Node.post_ignore "meta" (Str source)
+  Node.post_ignore n_meta (Str source.Node.label)
     (if on_off
-    then Message.subscribed (Str source, filter, Str sink, name)
-    else Message.unsubscribed (Str source, filter, Str sink, name))
+    then Message.subscribed (Str source.Node.label, filter, Str sink, name)
+    else Message.unsubscribed (Str source.Node.label, filter, Str sink, name))
     (Str "")
 
 let init () =
-  Node.send_ignore "factory" (Message.create (Str "direct", Arr [Str "meta"], Str "", Str ""))
+  Node.send_ignore' "factory" (Message.create (Str "direct", Arr [Str "meta"], Str "", Str ""))

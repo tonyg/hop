@@ -20,7 +20,7 @@ open Datastructures
 open Status
 
 type t = {
-    name: string;
+    name: Node.name;
     subscriptions: Subscription.set_t;
     mtx: Mutex.t;
     mutable routing_table: UuidSet.t StringMap.t;
@@ -76,14 +76,16 @@ let route_message info n sexp =
 
 let factory arg =
   match arg with
-  | (Arr [Str name]) ->
+  | (Arr [Str name_str]) ->
       let info = {
-	name = name;
+	name = Node.name_of_string name_str;
 	subscriptions = Subscription.new_set ();
 	mtx = Mutex.create ();
 	routing_table = StringMap.empty;
       } in
-      replace_ok (Node.make_idempotent_named classname name (route_message info)) (Str name)
+      replace_ok
+	(Node.make_idempotent_named classname info.name (route_message info))
+	(Str name_str)
   | _ ->
       Problem (Str "bad-arg")
 

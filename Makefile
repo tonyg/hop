@@ -2,9 +2,9 @@ APP=hop_server
 TEMPLATES=$(wildcard web/bootstrap/templates/*.xml)
 HTML=$(subst web/bootstrap/templates/,web/,$(subst .xml,.html,$(TEMPLATES)))
 
-all: message.ml amqp_spec.ml $(APP).native web/bootstrap/css/bootstrap.css webpages
+all: message.ml amqp_spec.ml $(APP).native webpages
 
-webpages: $(HTML)
+webpages: $(HTML) web/bootstrap/css/bootstrap.css
 
 web/bootstrap/css/bootstrap.css: web/bootstrap/less/*.less
 	recess --compile web/bootstrap/less/bootstrap.less > $@

@@ -29,6 +29,8 @@ type set_t = t StringMap.t ref
 
 let new_set () = ref StringMap.empty
 
+let count subs = StringMap.cardinal !subs
+
 let create source subs filter sink name reply_sink reply_name =
   let uuid = Uuid.create () in
   let sub = {

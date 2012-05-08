@@ -29,6 +29,11 @@
 	  &lt;script src="http://html5shim.googlecode.com/svn/trunk/html5.js"&gt;&lt;/script&gt;
 	  &lt;!</xsl:text>[endif]
       </xsl:comment>
+      <link rel="shortcut icon" href="/img/hop.ico" />
+      <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/img/hop-icon-144-precomposed.png" />
+      <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/img/hop-icon-114-precomposed.png" />
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/img/hop-icon-72-precomposed.png" />
+      <link rel="apple-touch-icon-precomposed" href="/img/hop-icon-57-precomposed.png" />
     </head>
     <body>
       <div class="navbar navbar-fixed-top">
